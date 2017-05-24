@@ -101,7 +101,7 @@ ENV/
 .mypy_cache/
 
 # cache
-.cache
+*.cache
 
 # config
-.ini
+*.ini
