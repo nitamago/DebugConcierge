@@ -8,8 +8,8 @@ import sys
 from logging import getLogger, StreamHandler, NullHandler, DEBUG
 
 logger = getLogger(__name__)
-#handler = StreamHandler()
-handler = NullHandler()
+handler = StreamHandler()
+#handler = NullHandler()
 handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
@@ -28,7 +28,11 @@ class Clone_Detecter:
         #コードをファイルに書き出す
         self.write_to_file(template.tmplt_id, template.target_code, template.modify_code)
         #scorpioを走らせて、クローンを検出
-        self.run_scorpio(template.tmplt_id)
+        try:
+            self.run_scorpio(template.tmplt_id)
+        except NoScorpioException as e:
+            logger.debug(e.message)
+            sys.exit()
 
     def write_to_file(self, template_id, q_codes, a_codes):
         for f in glob.glob(self.q_codes_dir+"/*.java"):
@@ -40,16 +44,32 @@ class Clone_Detecter:
                 os.remove(f)
         
         for i, code in enumerate(q_codes):
+            if not os.path.exists(self.q_codes_dir):
+                os.makedirs(self.q_codes_dir)
             f = open("{0}/{1}_{2}.java".format(self.q_codes_dir, template_id, i), "w")
             f.write(code)
             f.close()
 
         for i, code in enumerate(a_codes):
+            if not os.path.exists(self.a_codes_dir):
+                os.makedirs(self.a_codes_dir)
             f = open("{0}/{1}_{2}.java".format(self.a_codes_dir, template_id, i), "w")
             f.write(code)
             f.close()
 
     def run_scorpio(self, output_name):
+        #scorpio.jarが存在するか
+        if not os.path.exists(self.scorpio_dir):
+            raise NoScorpioException()
+        #scorpioの出力先ディレクトリが存在するか
+        if not os.path.exists(self.clone_result_dir):
+            os.makedirs(self.clone_result_dir)
+
         result_full_path = self.clone_result_dir + output_name + ".xml"
         res = subprocess.call(self.scorpio_run_command.format(self.scorpio_dir, self.q_codes_dir, self.a_codes_dir, result_full_path), shell=True)
         logger.debug(res)
+
+class NoScorpioException(Exception):
+    def __init__(self):
+        self.message = "Not exist scorpio.jar"
+

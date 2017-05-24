@@ -2,6 +2,10 @@
 import os, sys
 sys.path.append(os.getcwd())
 
+import configparser
+inifile = configparser.ConfigParser()
+inifile.read("config.ini")
+
 from DB.DB import DB
 from Templates.Template import Template
 from Templates.Clone_Detecter import Clone_Detecter
@@ -268,7 +272,9 @@ class ConvertError(Exception):
         return "This is Convert Exception"
 
 if __name__ == "__main__":
-    tm = Template_Maker(DB(cache_write_flag=True, cache_read_flag=True), show_code=False, simple_mode=True)
+    db = DB(cache_write_flag=inifile.getboolean("DB_cache", "cache_write_flag"), cache_read_flag=inifile.getboolean("DB_cache", "cache_read_flag"))
+    tm = Template_Maker(db, show_code=inifile.getboolean("Template_Maker", "show_code"), simple_mode=inifile.getboolean("Template_Maker", "simple_mode"))
+    print(inifile["DB_cache"]["cache_read_flag"])
     tm.run()
     tm.stat["correct"] = tm.stat["total"] - tm.stat["no_code"] - tm.stat["no_best_answer"] - tm.stat["not_compilable"]
     logger.debug(tm.stat)

@@ -1,5 +1,6 @@
 #コードクローンを解析して、差分を検出するクラス
 
+import os
 import sys
 import javalang
 from javalang.tree import *
@@ -21,6 +22,8 @@ class Clone_Analyzer:
     def run(self, template):
         logger.debug("Clone Analyzer running")
 
+        if not os.path.exists(self.result_dir):
+            os.makedirs(self.result_dir)
         f = open(self.result_dir +"/"+ template.tmplt_id + ".xml")
         for line in f:
             contents = line.split("\t")

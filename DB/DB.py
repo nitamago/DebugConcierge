@@ -1,8 +1,8 @@
 # テンプレートのデーータベース
-import ConfigParser
+import configparser
 
-inifile = ConfigParser.SafeConfigParser
-inifile.read("./config.ini")
+inifile = configparser.ConfigParser()
+inifile.read("config.ini")
 
 from Templates.Template import Template
 from elasticsearch import Elasticsearch
@@ -21,8 +21,8 @@ logger.addHandler(handler)
 class DB:
     def __init__(self, cache_write_flag=False, cache_read_flag=False):
         self.templates = {}
-        self.db_address = inifile.get("settings", "host")
-        self.db_port = inifile.get("settings", "port")
+        self.db_address = inifile["settings"]["host"]
+        self.db_port = inifile["settings"]["port"]
         self.es = Elasticsearch(['http://'+self.db_address+':'+self.db_port])
         self.index = "code_concierge"
         self.q_doc_type = "question_posts"
@@ -53,9 +53,11 @@ class DB:
         return res
 
     def get_records_by_tag(self, kywd, doc_type):
+        print("flag is {0}".format(self.cache_read_flag))
+
         if self.cache_read_flag:
             logger.debug("DB cache mode is on")
-            f = open("DB/DB.cache", "br")
+            f = open("./DB/DB.cache", "br")
             res = pickle.load(f)
             f.close()
         else:
