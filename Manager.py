@@ -1,7 +1,7 @@
 ## マネージャクラス
 
 from Templates.Template_Maker import Template_Maker
-from DB import DB
+from DB.DB import DB
 from Bug_Detect.Bug_Detect import Bug_Detect
 from Fix_Modify.Fix_Modify  import Fix_Modify
 from Fix_Evaluation.Fix_Evaluation  import Fix_Evaluation

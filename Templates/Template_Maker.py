@@ -16,9 +16,9 @@ from javalang.tree import *
 from logging import getLogger, StreamHandler, NullHandler, DEBUG
 
 logger = getLogger(__name__)
-#handler = StreamHandler()
+handler = StreamHandler()
 handler = NullHandler()
-handler.setLevel(DEBUG)
+#handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 
@@ -27,6 +27,8 @@ class Template_Maker:
     def __init__(self, db, show_code=True, simple_mode=False):
         logger.debug("Template Maker initialized")
         self.db = db
+        self.show_code = show_code
+
         self.stat = {}
         self.stat["total"] = 500
         self.stat["correct"] = 0
@@ -35,13 +37,13 @@ class Template_Maker:
         self.stat["no_best_answer"] = 0
         self.unregistered = []
 
-        self.clone_detecter = Clone_Detecter()
-        self.clone_analyzer = Clone_Analyzer()
+        self.clone_detecter = Clone_Detecter(show_code=show_code, simple_mode=simple_mode)
+        self.clone_analyzer = Clone_Analyzer(show_code=show_code, simple_mode=simple_mode)
 
         self.show_code = show_code
 
     def run(self):
-        logger.debug("Template Maker running")
+        print("Template Maker running")
         #javaタグを持つ質問を読み出す
         json = self.db.get_records_by_tag("java", self.db.q_doc_type)
 
@@ -77,12 +79,17 @@ class Template_Maker:
 
             #テンプレート化する
             try:
+                print("## {0} is being Templated ###############".format(q_id))
                 t = self.convert_template(i, q_id, q_plain_str, a_plain_str)
                 self.db.put_template(t)
                 self.clone_detecter.run(t)
-                self.clone_analyzer.run(t)
+                diff_info_list = self.clone_analyzer.run(t)
+                for diff_dict in diff_info_list:
+                    print(diff_dict["remove_list"])
+                    print(diff_dict["add_list"])
             except ConvertError:
                 self.stat["not_compilable"] += 1
+                print("Failed")
 
         self.db.write_template()
 
@@ -272,9 +279,14 @@ class ConvertError(Exception):
         return "This is Convert Exception"
 
 if __name__ == "__main__":
-    db = DB(cache_write_flag=inifile.getboolean("DB_cache", "cache_write_flag"), cache_read_flag=inifile.getboolean("DB_cache", "cache_read_flag"))
-    tm = Template_Maker(db, show_code=inifile.getboolean("Template_Maker", "show_code"), simple_mode=inifile.getboolean("Template_Maker", "simple_mode"))
-    print(inifile["DB_cache"]["cache_read_flag"])
+    cache_write_flag=inifile.getboolean("DB_cache", "cache_write_flag")
+    cache_read_flag=inifile.getboolean("DB_cache", "cache_read_flag")
+    db = DB(cache_write_flag=cache_write_flag, cache_read_flag=cache_read_flag)
+
+    show_code=inifile.getboolean("Template_Maker", "show_code")
+    simple_mode=inifile.getboolean("Template_Maker", "simple_mode")
+    tm = Template_Maker(db, show_code=show_code, simple_mode=simple_mode)
+    print(inifile.getboolean("Template_Maker", "show_code"))
     tm.run()
     tm.stat["correct"] = tm.stat["total"] - tm.stat["no_code"] - tm.stat["no_best_answer"] - tm.stat["not_compilable"]
     logger.debug(tm.stat)
