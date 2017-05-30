@@ -110,3 +110,4 @@ ENV/
 Templates/Code_Clone/Answer_codes/*.java
 Templates/Code_Clone/Question_codes/*.java
 Templates/Code_Clone/result/*.xml
+*.tmplt
