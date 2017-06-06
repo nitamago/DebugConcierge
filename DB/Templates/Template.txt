@@ -1,1 +1,1 @@
-{"TemplateID":<template_id>,"TargetCode":<target_code>,"ModifyCode":<modify_code>,"APITag":<api_tag>,"ApplyConstraint":<apply_constraint>}
+{"TemplateID":<template_id>,"TargetCode":<target_code>,"ModifyCode":<modify_code>,"APITag":<api_tag>,"ApplyConstraint":<apply_constraint>,"DiffInfoList":<diff_info_list>}

@@ -7,9 +7,9 @@ inifile = configparser.ConfigParser()
 inifile.read("config.ini")
 
 from DB.DB import DB
-from Templates.Template import Template
-from Templates.Clone_Detecter import Clone_Detecter
-from Templates.Clone_Analyzer import Clone_Analyzer
+from Template_Maker.Template import Template
+from Template_Maker.Clone_Detecter import Clone_Detecter
+from Template_Maker.Clone_Analyzer import Clone_Analyzer
 import re
 import javalang
 from javalang.tree import *
@@ -30,7 +30,7 @@ class Template_Maker:
         self.show_code = show_code
 
         self.stat = {}
-        self.stat["total"] = 500
+        self.stat["total"] = 5000
         self.stat["correct"] = 0
         self.stat["no_code"] = 0
         self.stat["not_compilable"] = 0
@@ -45,7 +45,7 @@ class Template_Maker:
     def run(self):
         print("Template Maker running")
         #javaタグを持つ質問を読み出す
-        json = self.db.get_records_by_tag("java", self.db.q_doc_type)
+        json = self.db.get_records_by_tag("java", self.db.q_doc_type, self.stat["total"])
 
         for i in range(0, self.stat["total"]):
         #for i in range(0, json["hits"]["total"]):
@@ -81,15 +81,16 @@ class Template_Maker:
             try:
                 print("## {0} is being Templated ###############".format(q_id))
                 t = self.convert_template(i, q_id, q_plain_str, a_plain_str)
-                self.db.put_template(t)
                 self.clone_detecter.run(t)
                 diff_info_list = self.clone_analyzer.run(t)
-                for diff_dict in diff_info_list:
-                    print(diff_dict["remove_list"])
-                    print(diff_dict["add_list"])
+                t.set_diff_info(diff_info_list)
+                self.db.put_template(t)
             except ConvertError:
                 self.stat["not_compilable"] += 1
                 print("Failed")
+            except Exception:
+                self.stat["not_compilable"] += 1
+                print("Unknown Exception")
 
         self.db.write_template()
 
@@ -261,7 +262,7 @@ class Template_Maker:
                 continue
             if i == 2 and not self.preference["ClassContent"]:
                 continue
-            f = open("Templates/Skeletons/Skeleton"+str(i)+".java")
+            f = open("Template_Maker/Skeletons/Skeleton"+str(i)+".java")
             skeleton = f.read()
             planted_code = skeleton.replace("/*insert here*/", code)
             ret.append(planted_code)
@@ -278,7 +279,8 @@ class ConvertError(Exception):
     def __str__(self):
         return "This is Convert Exception"
 
-if __name__ == "__main__":
+
+def main():
     cache_write_flag=inifile.getboolean("DB_cache", "cache_write_flag")
     cache_read_flag=inifile.getboolean("DB_cache", "cache_read_flag")
     db = DB(cache_write_flag=cache_write_flag, cache_read_flag=cache_read_flag)
@@ -290,3 +292,6 @@ if __name__ == "__main__":
     tm.run()
     tm.stat["correct"] = tm.stat["total"] - tm.stat["no_code"] - tm.stat["no_best_answer"] - tm.stat["not_compilable"]
     logger.debug(tm.stat)
+
+if __name__ == "__main__":
+    main()

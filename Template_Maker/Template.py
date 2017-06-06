@@ -9,3 +9,6 @@ class Template:
         self.api_tag = api_tag
         self.apply_constraint = apply_constraint
 
+    def set_diff_info(self, diff_info_list):
+        self.diff_info_list = diff_info_list
+

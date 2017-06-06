@@ -19,7 +19,7 @@ class Clone_Analyzer:
     def __init__(self, show_code=True, simple_mode=True):
         self.show_code = show_code
 
-        self.result_dir = "Templates/Code_Clone/result"
+        self.result_dir = "Template_Maker/Code_Clone/result"
 
     def run(self, template):
         logger.debug("Clone Analyzer running")
@@ -116,7 +116,7 @@ class Clone_Analyzer:
                         dist = i - anc_line
 
                 info["anchor"] = anc_line
-                info["anchor_code"] = target_code_separated[anc_line-1]
+                info["anchor_code"] = modify_code_separated[anc_line-1]
                 info["offset"] = i - anc_line
                 info["diff_code"] = modify_code_separated[i-1]
                 add_list.append(info)

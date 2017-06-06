@@ -4,7 +4,7 @@ import configparser
 inifile = configparser.ConfigParser()
 inifile.read("config.ini")
 
-from Templates.Template import Template
+from Template_Maker.Template import Template
 from elasticsearch import Elasticsearch
 import copy
 import json
@@ -27,7 +27,6 @@ class DB:
         self.index = "code_concierge"
         self.q_doc_type = "question_posts"
         self.a_doc_type = "answer_posts"
-        self.size = 1000
 
         self.load_templates()
 
@@ -52,7 +51,7 @@ class DB:
         res = self.es.search(index = self.index, doc_type = doc_type, body = query)
         return res
 
-    def get_records_by_tag(self, kywd, doc_type):
+    def get_records_by_tag(self, kywd, doc_type, size):
         print("flag is {0}".format(self.cache_read_flag))
 
         if self.cache_read_flag:
@@ -67,7 +66,7 @@ class DB:
                         "Tags" : kywd,
                     }
                 },
-                "size" : self.size,
+                "size" : size,
             }
             res = self.es.search(index = self.index, doc_type = doc_type, body = query)
             if self.cache_write_flag:
@@ -158,6 +157,8 @@ class DB:
 
             tmp = tmp.replace("<api_tag>", "\""+ template.api_tag +"\"")
             tmp = tmp.replace("<apply_constraint>", "\""+ template.apply_constraint +"\"")
+
+            tmp = tmp.replace("<diff_info_list>", str(template.diff_info_list))
             f = open("DB/Templates/"+template.tmplt_id+".tmplt", "w")
             f.write(tmp)
             f.close()
