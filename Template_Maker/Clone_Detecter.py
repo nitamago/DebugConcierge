@@ -3,6 +3,8 @@
 
 import subprocess
 import os
+import shutil
+from distutils.dir_util import copy_tree                
 import glob
 import sys
 from logging import getLogger, StreamHandler, NullHandler, DEBUG
@@ -21,6 +23,7 @@ class Clone_Detecter:
         self.q_codes_dir = "Template_Maker/Code_Clone/Question_codes"
         self.a_codes_dir = "Template_Maker/Code_Clone/Answer_codes"
         self.clone_result_dir = "Template_Maker/Code_Clone/result/"
+        self.store_dir = "Template_Maker/Code_Clone/store/"
         self.scorpio_run_command = "java -jar {0} -d {1} -ad {2} -cross on -o {3} -s 2 -t 2 > /dev/null"
         
     def run(self, template):
@@ -30,6 +33,9 @@ class Clone_Detecter:
         #scorpioを走らせて、クローンを検出
         try:
             self.run_scorpio(template.tmplt_id)
+
+            #evidence用にコードをstore_dirに移動
+            self.move_files_store()
         except NoScorpioException as e:
             logger.debug(e.message)
             sys.exit()
@@ -46,16 +52,14 @@ class Clone_Detecter:
         for i, code in enumerate(q_codes):
             if not os.path.exists(self.q_codes_dir):
                 os.makedirs(self.q_codes_dir)
-            f = open("{0}/{1}_{2}.java".format(self.q_codes_dir, template_id, i), "w")
-            f.write(code)
-            f.close()
+            with open("{0}/{1}_{2}.java".format(self.q_codes_dir, template_id, i), "w") as f:
+                f.write(code)
 
         for i, code in enumerate(a_codes):
             if not os.path.exists(self.a_codes_dir):
                 os.makedirs(self.a_codes_dir)
-            f = open("{0}/{1}_{2}.java".format(self.a_codes_dir, template_id, i), "w")
-            f.write(code)
-            f.close()
+            with open("{0}/{1}_{2}.java".format(self.a_codes_dir, template_id, i), "w") as f:
+                f.write(code)
 
     def run_scorpio(self, output_name):
         #scorpio.jarが存在するか
@@ -68,6 +72,19 @@ class Clone_Detecter:
         result_full_path = self.clone_result_dir + output_name + ".xml"
         res = subprocess.call(self.scorpio_run_command.format(self.scorpio_dir, self.q_codes_dir, self.a_codes_dir, result_full_path), shell=True)
         print(res)
+
+    def move_files_store(self):                
+        # storeディレクトの存在確認
+        store_q_dir = self.store_dir+"Question_codes"
+        if not os.path.exists(store_q_dir):
+            os.makedirs(store_q_dir)            
+        store_a_dir = self.store_dir+"Answer_codes"
+        if not os.path.exists(store_a_dir):
+            os.makedirs(store_a_dir)
+        # ディレクトリコピー
+        copy_tree(self.q_codes_dir, store_q_dir)
+        copy_tree(self.a_codes_dir, store_a_dir)
+
 
 class NoScorpioException(Exception):
     def __init__(self):

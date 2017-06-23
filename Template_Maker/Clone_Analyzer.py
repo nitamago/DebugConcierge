@@ -8,31 +8,33 @@ import javalang
 from javalang.tree import *
 from logging import getLogger, StreamHandler, NullHandler, DEBUG
 
+from Template_Maker.Strategy.API_invocation import API_invocation
+
 logger = getLogger(__name__)
-#handler = StreamHandler()
-handler = NullHandler()
+handler = StreamHandler()
+#handler = NullHandler()
 handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 
 class Clone_Analyzer:
-    def __init__(self, show_code=True, simple_mode=True):
+    def __init__(self, template_maker, show_code=True, simple_mode=True):
+        self.template_maker = template_maker
         self.show_code = show_code
 
         self.result_dir = "Template_Maker/Code_Clone/result"
 
     def run(self, template):
-        logger.debug("Clone Analyzer running")
+        print("Clone Analyzer running")
 
         ret = []
         if not os.path.exists(self.result_dir):
             os.makedirs(self.result_dir)
-        f = open(self.result_dir +"/"+ template.tmplt_id + ".xml")
-        for line in f:
-            contents = line.split("\t")
-            diff_info = self.extract(contents, template)
-            ret.append(diff_info)
-        f.close()
+        with open(self.result_dir +"/"+ template.tmplt_id + ".xml") as f:
+            for line in f:
+                contents = line.split("\t")
+                diff_info = self.extract(contents, template)
+                ret.append(diff_info)
         return ret
     
     def extract(self, contents, template):
@@ -78,8 +80,10 @@ class Clone_Analyzer:
             q_tree = self.divide_syntax_element(target_code)
             a_tree = self.divide_syntax_element(modify_code)
 
-            # ASTの解析して差分を抽出
+            # ASTの解析して戦略を適用
             diff_dict = self.get_tree_diff(q_tree, a_tree, q_start, q_end, a_start, a_end, a_exclusions, q_exclusions)
+            api_strategy = API_invocation(self.template_maker)
+            api_strategy.run(q_tree, a_tree, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
 
             # コード表示
             self.show_code_diff(diff_dict, q_start, q_end, a_start, a_end,
@@ -90,38 +94,14 @@ class Clone_Analyzer:
                     q_exclusions, a_exclusions)
 
             # クローンをアンカーにして、差分コードの情報を作成
-            remove_list = []
-            for i in diff_dict["rm"]:
-                dist = sys.maxsize
-                info = {}
-                for anc_line in q_clone_part:
-                    if abs(i-anc_line) < dist:
-                        dist = i - anc_line
-
-                info["anchor"] = anc_line
-                info["anchor_code"] = target_code_separated[anc_line-1]
-                info["offset"] = i - anc_line
-                info["diff_code"] = target_code_separated[i-1]
-                remove_list.append(info)
-            logger.debug("remove list")
-            logger.debug(remove_list)
+            remove_list = self.get_rm_diff_list(diff_dict, q_clone_part, target_code_separated)
+            print("remove list")
+            print(remove_list)
             ret["remove_list"] = remove_list
 
-            add_list = []
-            for i in diff_dict["add"]:
-                dist = sys.maxsize
-                info = {}
-                for anc_line in a_clone_part:
-                    if abs(i-anc_line) < dist:
-                        dist = i - anc_line
-
-                info["anchor"] = anc_line
-                info["anchor_code"] = modify_code_separated[anc_line-1]
-                info["offset"] = i - anc_line
-                info["diff_code"] = modify_code_separated[i-1]
-                add_list.append(info)
-            logger.debug("add list")
-            logger.debug(add_list)
+            add_list = self.get_add_diff_list(diff_dict, a_clone_part, modify_code_separated)
+            print("add list")
+            print(add_list)
             ret["add_list"] = add_list
 
             return ret
@@ -162,6 +142,7 @@ class Clone_Analyzer:
                         print(code)
                         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
+    # 単純に差分を取る戦略
     # 差分の辞書型を返す {"add":, "rm":, "rep":}
     def get_tree_diff(self, q_tree, a_tree, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions):
         ret = {"add":[], "rm":[], "rep":[]}
@@ -172,25 +153,6 @@ class Clone_Analyzer:
         # remove差分
         ret["rm"].extend(a_exclusions)
 
-        # replace差分
-        # メソッド呼び出しだけに関して、diffをとる
-        for path, node in q_tree:
-            if isinstance(node, MethodInvocation):
-                token_line_numm = node.token.position[0]
-                if token_line_numm >= q_start and token_line_numm <= q_end and token_line_numm not in q_exclusions:
-                    print("MethodInvocation in Clone Area! {0}".format(node.token))
-                    print("member: {0}, type_arguments: {1}, arguments: {2}"
-                            .format(node.member,
-                            node.type_arguments,
-                            node.arguments))
-                    print("prefix_operator: {0}, postfix_operator: {1}, qualifier: {2}, selectors: {3}"
-                            .format(node.prefix_operators,
-                            node.postfix_operators,
-                            node.qualifier,
-                            node.selectors))
-            
-
-        #sys.exit()
         return ret
 
     def show_code_diff(self, diff_dict, q_start, q_end, a_start, a_end,
@@ -236,6 +198,38 @@ class Clone_Analyzer:
             print("=================================================")
             print("\n".join(marked_modify_code_separated[a_start: a_end+1]))
             print("=================================================")         
+
+    def get_rm_diff_list(self, diff_dict, q_clone_part, target_code_separated):
+        # クローンをアンカーにして、差分コードの情報を作成
+        remove_list = []
+        for i in diff_dict["rm"]:
+            dist = sys.maxsize
+            info = {}
+            for anc_line in q_clone_part:
+                if abs(i-anc_line) < dist:
+                    dist = i - anc_line
+
+            info["anchor"] = anc_line
+            info["anchor_code"] = target_code_separated[anc_line-1]
+            info["offset"] = i - anc_line
+            info["diff_code"] = target_code_separated[i-1]
+            remove_list.append(info)
+        return remove_list
+
+    def get_add_diff_list(self, diff_dict, a_clone_part, modify_code_separated):
+        add_list = []
+        for i in diff_dict["add"]:
+            dist = sys.maxsize
+            info = {}
+            for anc_line in a_clone_part:
+                if abs(i-anc_line) < dist:
+                    dist = i - anc_line
+            info["anchor"] = anc_line
+            info["anchor_code"] = modify_code_separated[anc_line-1]
+            info["offset"] = i - anc_line
+            info["diff_code"] = modify_code_separated[i-1]
+            add_list.append(info)
+        return add_list
 
 
 class ConvertError(Exception):

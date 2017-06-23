@@ -25,8 +25,8 @@ class Bug_Detect:
         
 
         try:
-            f = open("test_src/target_src.java")
-            src = f.read()
+            with open("test_src/target_src.java") as f:
+                src = f.read()
             tree = javalang.parse.parse(src)
             for path, node in tree:
                 print("{0}, {1}".format(path, node.types[0].name))
@@ -40,6 +40,7 @@ class Bug_Detect:
         return bug_list
 
     def search_template(self, src):
-        src_str = open(src).read()
+        with open(src) as f:
+            src_str = f.read()
 
 
