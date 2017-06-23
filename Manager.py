@@ -45,7 +45,8 @@ class Manager:
 @click.command()
 @click.option('--template_make', '-t', is_flag=True)
 @click.option('--template_make_status', '-s', is_flag=True)
-def cmd(template_make, template_make_status):
+@click.option('--keyword')
+def cmd(template_make, template_make_status, keyword):
     if template_make:
         # DBオブジェクト
         cache_write_flag=inifile.getboolean("DB_cache", "cache_write_flag")
@@ -53,9 +54,9 @@ def cmd(template_make, template_make_status):
         db = DB(cache_write_flag=cache_write_flag, cache_read_flag=cache_read_flag)
 
         # Template_makerオブジェクト
-        show_code=inifile.getboolean("Template_Maker", "show_code")
-        simple_mode=inifile.getboolean("Template_Maker", "simple_mode")
-        tm = Template_Maker(db, show_code=show_code, simple_mode=simple_mode)
+        show_code = inifile.getboolean("Template_Maker", "show_code")
+        simple_mode = inifile.getboolean("Template_Maker", "simple_mode")
+        tm = Template_Maker(db, show_code=show_code, simple_mode=simple_mode, keyword=keyword)
         tm.run()
         
         # Template_makerのstat表示

@@ -24,29 +24,41 @@ logger.addHandler(handler)
 
 class Template_Maker:
     preference = {"MethodContent": True, "ClassContent": True, "CheckSemicolon": True, "CloseBracket": True }
-    def __init__(self, db, show_code=True, simple_mode=False):
+
+    def __init__(self, db, show_code=True, simple_mode=False, keyword="java"):
         logger.debug("Template Maker initialized")
         self.db = db
         self.show_code = show_code
+        self.simple_mode = simple_mode
+        self.keyword = keyword
 
         self.stat = {}
-        self.stat["total"] = 5000
+        self.stat["total"] = 10000
         self.stat["correct"] = 0
         self.stat["no_code"] = 0
         self.stat["not_compilable"] = 0
         self.stat["no_best_answer"] = 0
+
+        self.stat["API_invocation"] = {}
+        self.stat["API_invocation"]["total"] = 0
+        self.stat["API_invocation"]["constraint_exist"] = 0
+        self.stat["API_invocation"]["constraint_not_exist"] = 0
+
         self.unregistered = []
 
         self.clone_detecter = Clone_Detecter(show_code=show_code, simple_mode=simple_mode)
-        self.clone_analyzer = Clone_Analyzer(show_code=show_code, simple_mode=simple_mode)
-
-        self.show_code = show_code
+        self.clone_analyzer = Clone_Analyzer(self, show_code=show_code, simple_mode=simple_mode)
 
     def run(self):
         print("Template Maker running")
         #javaタグを持つ質問を読み出す
-        json = self.db.get_records_by_tag("java", self.db.q_doc_type, self.stat["total"])
+        json = self.db.get_records_by_tag(self.keyword, self.db.q_doc_type, self.stat["total"])
+        # javaタグの関連記事の総数
+        #total_count = json["hits"]["total"]
+        #self.stat["total"] = total_count
+        #json = self.db.get_records_by_tag("java", self.db.q_doc_type, total_count)
 
+        exit_flag = False
         for i in range(0, self.stat["total"]):
         #for i in range(0, json["hits"]["total"]):
             q_source = json["hits"]["hits"][i]["_source"]
@@ -88,9 +100,11 @@ class Template_Maker:
             except ConvertError:
                 self.stat["not_compilable"] += 1
                 print("Failed")
+            """
             except Exception:
                 self.stat["not_compilable"] += 1
                 print("Unknown Exception")
+            """
 
         self.db.write_template()
 
@@ -252,7 +266,12 @@ class Template_Maker:
                         logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         logger.debug(code)
                         logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-
+                except StopIteration:
+                    logger.debug("- StopIteration")
+                    if self.show_code:
+                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                        logger.debug(code)
+                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     def plant_to_skeleton(self, code):
         #code = self.check_semicolon(code)
@@ -262,11 +281,10 @@ class Template_Maker:
                 continue
             if i == 2 and not self.preference["ClassContent"]:
                 continue
-            f = open("Template_Maker/Skeletons/Skeleton"+str(i)+".java")
-            skeleton = f.read()
+            with open("Template_Maker/Skeletons/Skeleton"+str(i)+".java") as f:
+                skeleton = f.read()
             planted_code = skeleton.replace("/*insert here*/", code)
             ret.append(planted_code)
-            f.close()
         return ret
 
     def check_semicolon(self, code):
