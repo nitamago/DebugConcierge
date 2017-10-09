@@ -29,12 +29,16 @@ inifile.read("config.ini")
 class Template_Maker:
     preference = {"MethodContent": True, "ClassContent": True, "CheckSemicolon": True, "CloseBracket": True }
 
-    def __init__(self, db, show_code=True, simple_mode=False, keyword="java"):
+    def __init__(self, db, show_code=True, simple_mode=False, keyword="java", debug_flag=False, art_id=-1):
         logger.debug("Template Maker initialized")
         self.db = db
         self.show_code = show_code
         self.simple_mode = simple_mode
         self.keyword = keyword
+
+        # For debug
+        self.debug_flag = debug_flag
+        self.art_id = art_id
 
         self.stat = {}
         self.stat["total"] = 10000
@@ -78,6 +82,11 @@ class Template_Maker:
             q_body_str = q_source["Body"]
             q_plain_str = self.plain(q_body_str)
             q_score = q_source["Score"]
+
+            # For Debug
+            if self.debug_flag and q_id != self.art_id:
+                print("aborted")
+                continue
 
             #ベストアンサーを持たなければスキップ
             if not "AcceptedAnswerId" in json["hits"]["hits"][i]["_source"]:

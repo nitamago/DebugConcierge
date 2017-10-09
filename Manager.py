@@ -48,7 +48,9 @@ class Manager:
 @click.option('--template_make', '-t', is_flag=True, help="Flag whether making Template pr not")
 @click.option('--template_make_status', '-s', is_flag=True, help="Flag whether making status or not")
 @click.option('--keyword', help="Keyword for thorwing Query")
-def cmd(template_make, template_make_status, keyword):
+@click.option('--debug_flag', '-D', is_flag=True, help="Flag debug mode")
+@click.option('--article_id', default='', help='target article id (available in debug mode)')
+def cmd(template_make, template_make_status, keyword, debug_flag, article_id):
     if template_make:
         # DBオブジェクト
         cache_write_flag=inifile.getboolean("DB_cache", "cache_write_flag")
@@ -58,7 +60,7 @@ def cmd(template_make, template_make_status, keyword):
         # Template_makerオブジェクト
         show_code = inifile.getboolean("Template_Maker", "show_code")
         simple_mode = inifile.getboolean("Template_Maker", "simple_mode")
-        tm = Template_Maker(db, show_code=show_code, simple_mode=simple_mode, keyword=keyword)
+        tm = Template_Maker(db, show_code=show_code, simple_mode=simple_mode, keyword=keyword, debug_flag=debug_flag, art_id=article_id)
         tm.run()
         
         # Template_makerのstat表示

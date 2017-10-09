@@ -18,12 +18,17 @@ import subprocess
 class Get_Base_Info():
     def __init__(self, template_maker):
         self.stat = template_maker.stat["Get_Base_Info"]
-    def run(self, q_tree, a_tree, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions):
+
+    def run(self, q_path, a_path, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions):
+        jar_path = "/Users/HiroseMasayuki/Documents/Git/Debug_Concierge/Template_Maker/BaseInfo.jar"
         lines = " ".join(map(str, [q_start, q_end, a_start, a_end]))
         exclusions = ",".join(map(str, q_exclusions)) + " " + ",".join(map(str, a_exclusions))
-        self.command = "java -jar BaseInfo.java {0} {1}".format(lines, exclusions)
+        out_path = "/Users/HiroseMasayuki/Documents/Git/Debug_Concierge"
+        self.command = "java -jar {0} {1} {2} {3} {4} {5}".format(jar_path, q_path, a_path, out_path, lines, exclusions)
 
         print(self.command)
+        subprocess.call(self.command, shell=True)
+
         """
         code = []
         for path, node in q_tree:
@@ -54,4 +59,4 @@ class Get_Base_Info():
             elif isinstance(node, CatchClauseParameter):
                 code.append(node.name)
         """
-        print(" ".join(code))
+        #print(" ".join(code))

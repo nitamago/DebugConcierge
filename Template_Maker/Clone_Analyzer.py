@@ -85,10 +85,12 @@ class Clone_Analyzer:
             diff_dict = self.get_tree_diff(q_tree, a_tree, q_start, q_end, a_start, a_end, a_exclusions, q_exclusions)
             #api_strategy = API_invocation(self.template_maker)
             #api_strategy.run(q_tree, a_tree, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
+
+            # 別ツールで解析
             get_base_info = Get_Base_Info(self.template_maker)
-            get_base_info.run(q_tree, a_tree, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
+            get_base_info.run(contents[0], contents[3], q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
+
             #FIXME
-            print(q_exclusions)
             exit()
 
             # コード表示
