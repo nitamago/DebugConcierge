@@ -17,17 +17,18 @@ logger.setLevel(DEBUG)
 logger.addHandler(handler)
 
 class Clone_Detecter:
-    def __init__(self, show_code=True, simple_mode=True):
+    def __init__(self, min_detect_line_num,  show_code=True, simple_mode=True):
         #self.exe_path = os.path.dirname(os.path.abspath(__file__))
         self.scorpio_dir = "Template_Maker/Code_Clone/scorpio.jar"
         self.q_codes_dir = "Template_Maker/Code_Clone/Question_codes"
         self.a_codes_dir = "Template_Maker/Code_Clone/Answer_codes"
         self.clone_result_dir = "Template_Maker/Code_Clone/result/"
         self.store_dir = "Template_Maker/Code_Clone/store/"
-        self.scorpio_run_command = "java -jar {0} -d {1} -ad {2} -cross on -o {3} -s 2 -t 2 > /dev/null"
+        self.scorpio_run_command = "java -jar {0} -d {1} -ad {2} -cross on -o {3} -s {4} -t 2 > /dev/null"
+        self.min_detect_line_num = min_detect_line_num
         
     def run(self, template):
-        print("Clone Detecter running")
+        print("Clone Detecter running \nmin detect num: {0}".format(self.min_detect_line_num))
         #コードをファイルに書き出す
         self.write_to_file(template.tmplt_id, template.target_code, template.modify_code)
         #scorpioを走らせて、クローンを検出
@@ -70,7 +71,7 @@ class Clone_Detecter:
             os.makedirs(self.clone_result_dir)
 
         result_full_path = self.clone_result_dir + output_name + ".xml"
-        res = subprocess.call(self.scorpio_run_command.format(self.scorpio_dir, self.q_codes_dir, self.a_codes_dir, result_full_path), shell=True)
+        res = subprocess.call(self.scorpio_run_command.format(self.scorpio_dir, self.q_codes_dir, self.a_codes_dir, result_full_path, self.min_detect_line_num), shell=True)
         print(res)
 
     def move_files_store(self):                
