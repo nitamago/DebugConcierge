@@ -9,6 +9,7 @@ from javalang.tree import *
 from logging import getLogger, StreamHandler, NullHandler, DEBUG
 
 from Template_Maker.Strategy.API_invocation import API_invocation
+from Template_Maker.Strategy.Get_Base_Info import Get_Base_Info
 
 logger = getLogger(__name__)
 handler = StreamHandler()
@@ -82,8 +83,13 @@ class Clone_Analyzer:
 
             # ASTの解析して戦略を適用
             diff_dict = self.get_tree_diff(q_tree, a_tree, q_start, q_end, a_start, a_end, a_exclusions, q_exclusions)
-            api_strategy = API_invocation(self.template_maker)
-            api_strategy.run(q_tree, a_tree, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
+            #api_strategy = API_invocation(self.template_maker)
+            #api_strategy.run(q_tree, a_tree, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
+            get_base_info = Get_Base_Info(self.template_maker)
+            get_base_info.run(q_tree, a_tree, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
+            #FIXME
+            print(q_exclusions)
+            exit()
 
             # コード表示
             self.show_code_diff(diff_dict, q_start, q_end, a_start, a_end,

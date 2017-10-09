@@ -1,5 +1,8 @@
 ## マネージャクラス
 
+import sys
+sys.path.append("./lib")
+
 import click
 import configparser
 inifile = configparser.ConfigParser()
@@ -13,7 +16,6 @@ handler = NullHandler()
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 
-import sys
 from Template_Maker.Template_Maker import Template_Maker
 from DB.DB import DB
 from Bug_Detect.Bug_Detect import Bug_Detect
@@ -43,9 +45,9 @@ class Manager:
 
 
 @click.command()
-@click.option('--template_make', '-t', is_flag=True)
-@click.option('--template_make_status', '-s', is_flag=True)
-@click.option('--keyword')
+@click.option('--template_make', '-t', is_flag=True, help="Flag whether making Template pr not")
+@click.option('--template_make_status', '-s', is_flag=True, help="Flag whether making status or not")
+@click.option('--keyword', help="Keyword for thorwing Query")
 def cmd(template_make, template_make_status, keyword):
     if template_make:
         # DBオブジェクト

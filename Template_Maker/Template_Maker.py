@@ -22,6 +22,10 @@ handler = NullHandler()
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 
+import configparser
+inifile = configparser.ConfigParser()
+inifile.read("config.ini")
+
 class Template_Maker:
     preference = {"MethodContent": True, "ClassContent": True, "CheckSemicolon": True, "CloseBracket": True }
 
@@ -44,9 +48,16 @@ class Template_Maker:
         self.stat["API_invocation"]["constraint_exist"] = 0
         self.stat["API_invocation"]["constraint_not_exist"] = 0
 
+        self.stat["Get_Base_Info"] = {}
+        self.stat["Get_Base_Info"]["total"] = 0
+        self.stat["Get_Base_Info"]["constraint_exist"] = 0
+        self.stat["Get_Base_Info"]["constraint_not_exist"] = 0
+
         self.unregistered = []
 
-        self.clone_detecter = Clone_Detecter(show_code=show_code, simple_mode=simple_mode)
+        min_detect_line_num = inifile.getint("Clone_Detecter", "min_detect_line")
+
+        self.clone_detecter = Clone_Detecter(min_detect_line_num, show_code=show_code, simple_mode=simple_mode)
         self.clone_analyzer = Clone_Analyzer(self, show_code=show_code, simple_mode=simple_mode)
 
     def run(self):
@@ -58,6 +69,7 @@ class Template_Maker:
         #self.stat["total"] = total_count
         #json = self.db.get_records_by_tag("java", self.db.q_doc_type, total_count)
 
+        print(json["hits"]["hits"][0]["_source"].keys())
         exit_flag = False
         for i in range(0, self.stat["total"]):
         #for i in range(0, json["hits"]["total"]):
@@ -65,6 +77,7 @@ class Template_Maker:
             q_id = q_source["Id"]
             q_body_str = q_source["Body"]
             q_plain_str = self.plain(q_body_str)
+            q_score = q_source["Score"]
 
             #ベストアンサーを持たなければスキップ
             if not "AcceptedAnswerId" in json["hits"]["hits"][i]["_source"]:
@@ -91,10 +104,20 @@ class Template_Maker:
 
             #テンプレート化する
             try:
-                print("## {0} is being Templated ###############".format(q_id))
+                print("## {0} is being Templated #Score: {1} ##############".format(q_id, q_score))
+                # テンプレートの下地を作る
                 t = self.convert_template(i, q_id, q_plain_str, a_plain_str)
+                print("# converted to base template!")
+
+                # クローンの検出
                 self.clone_detecter.run(t)
+                print("# clone detection finished!")
+
+                # クローン情報の解析
                 diff_info_list = self.clone_analyzer.run(t)
+                print("# clone analysis finished!")
+                
+                # 下地の編集
                 t.set_diff_info(diff_info_list)
                 self.db.put_template(t)
             except ConvertError:
@@ -140,9 +163,7 @@ class Template_Maker:
             code = codes[seq]
             if self.show_code:
                 logger.debug("Code No.{0}".format(seq))
-                logger.debug("==============================")
-                logger.debug("raw code block")
-                logger.debug("==============================")
+                logger.debug("== raw code block ============================")
                 logger.debug(code)
                 logger.debug("==============================")
             if self.try_compile(i, code):
@@ -159,6 +180,7 @@ class Template_Maker:
             if is_continue:
                 break
             #コード片の最後にセミコロンを付け足して、スケルトンへ移植
+            """
             if self.preference["CheckSemicolon"]:
                 semicoloned_code = self.check_semicolon(code)
                 logger.debug("Check Semicolon------------------------")
@@ -173,7 +195,9 @@ class Template_Maker:
                         is_continue = True
                 if is_continue:
                     break
+            """
             #コード片を中カッコで閉じる
+            """
             if self.preference["CloseBracket"]:
                 closed_bracket_code = self.close_bracket(code)
                 logger.debug("Closed Bracket--------------------------")
@@ -185,7 +209,9 @@ class Template_Maker:
                 if self.try_compile(i, d_closed_bracket_code):
                     ret.append(d_closed_bracket_code)
                     break
+            """
             #省略(...)を消す
+            """
             eliminate_ellipsis_code = code.replace("...", "")
             logger.debug("Eliminate Ellipsis----------------------")
             if self.show_code:
@@ -202,8 +228,10 @@ class Template_Maker:
                     break
             if is_continue:
                 break
+            """
                
             #コンパイル可能化の例外リスト
+            """
             command_line = [6, 84]
             error_log = [10]
             excessive_ellipsis = [15, 30]
@@ -224,6 +252,7 @@ class Template_Maker:
                 #sys.exit()
                 self.unregistered.append(i)
                 logger.debug(self.unregistered) 
+            """
             raise ConvertError
 
         return ret
@@ -234,7 +263,13 @@ class Template_Maker:
     #コンパイルできたらTrue
     def try_compile(self, i, code):
                 try:
-                    tree = javalang.parse.parse(code)
+                    tokens = list(javalang.tokenizer.tokenize(code))
+                    fixed_tokens = self.replace_literal(tokens)
+                    codes = []
+                    for j in range(0, len(fixed_tokens)):
+                        codes.append(fixed_tokens[j].value)
+                    #print(" ".join(codes))
+                    tree = javalang.parse.Parser(tokens)
                     return True
                 except javalang.parser.JavaSyntaxError:
                     logger.debug("- JavaSyntaxError")
@@ -272,6 +307,18 @@ class Template_Maker:
                         logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         logger.debug(code)
                         logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
+    # リテラルを置き換える
+    def replace_literal(self, tokens):
+        ret = []
+        for i in range(0, len(tokens)):
+            if type(tokens[i]) is javalang.tokenizer.Identifier:
+                tokens[i].value = tokens[i].value
+            if type(tokens[i]) is javalang.tokenizer.String:
+                tokens[i].value = "<Str>"
+            #print(type(tokens[i]))
+            ret.append(tokens[i])
+        return ret
 
     def plant_to_skeleton(self, code):
         #code = self.check_semicolon(code)

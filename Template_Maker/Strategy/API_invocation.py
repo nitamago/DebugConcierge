@@ -49,3 +49,35 @@ class API_invocation():
                 for d in node.declarators:
                     var_table[d.name] = var_type
 
+            elif isinstance(node, Literal):
+                print("Literal {0}".format(node.value))
+
+        code = []
+        for path, node in q_tree:
+            if isinstance(node, TypeDeclaration):
+                code.append(node.name)
+            elif isinstance(node, PackageDeclaration):
+                code.append(node.name)
+            elif isinstance(node, Type):
+                code.append(node.name)
+            elif isinstance(node, TypeParameter):
+                code.append(node.name)
+            elif isinstance(node, Annotation):
+                code.append(node.name)
+            elif isinstance(node, ElementValuePair):
+                code.append(node.name)
+            elif isinstance(node, MethodDeclaration):
+                code.append(node.name)
+            elif isinstance(node, ConstructorDeclaration):
+                code.append(node.name)
+            elif isinstance(node, VariableDeclarator):
+                code.append(node.token.value)
+            elif isinstance(node, FormalParameter):
+                code.append(node.name)
+            elif isinstance(node, InferredFormalParameter):
+                code.append(node.name)
+            elif isinstance(node, TryResource):
+                code.append(node.name)
+            elif isinstance(node, CatchClauseParameter):
+                code.append(node.name)
+        print(" ".join(code))
