@@ -88,7 +88,7 @@ class Clone_Analyzer:
 
             # 別ツールで解析
             get_base_info = Get_Base_Info(self.template_maker)
-            get_base_info.run(contents[0], contents[3], q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
+            get_base_info.run(template.tmplt_id, contents[0], contents[3], q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
 
             #FIXME
             exit()

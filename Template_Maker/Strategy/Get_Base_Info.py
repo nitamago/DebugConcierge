@@ -11,6 +11,7 @@ logger.setLevel(DEBUG)
 logger.addHandler(handler)
 
 import sys
+import os
 import javalang
 from javalang.tree import *
 import subprocess
@@ -19,12 +20,15 @@ class Get_Base_Info():
     def __init__(self, template_maker):
         self.stat = template_maker.stat["Get_Base_Info"]
 
-    def run(self, q_path, a_path, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions):
+    def run(self, template_id, q_path, a_path, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions):
         jar_path = "/Users/HiroseMasayuki/Documents/Git/Debug_Concierge/Template_Maker/BaseInfo.jar"
         lines = " ".join(map(str, [q_start, q_end, a_start, a_end]))
         exclusions = ",".join(map(str, q_exclusions)) + " " + ",".join(map(str, a_exclusions))
-        out_path = "/Users/HiroseMasayuki/Documents/Git/Debug_Concierge"
-        self.command = "java -jar {0} {1} {2} {3} {4} {5}".format(jar_path, q_path, a_path, out_path, lines, exclusions)
+        #out_path = "/Users/HiroseMasayuki/Documents/Git/Debug_Concierge"
+        result_dir = "Template_Maker/BaseInfo/result/"+template_id
+        if not os.path.exists(result_dir):
+            os.makedirs(result_dir)
+        self.command = "java -jar {0} {1} {2} {3} {4} {5}".format(jar_path, q_path, a_path, result_dir, lines, exclusions)
 
         print(self.command)
         subprocess.call(self.command, shell=True)
