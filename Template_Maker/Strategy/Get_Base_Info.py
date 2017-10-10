@@ -17,11 +17,12 @@ from javalang.tree import *
 import subprocess
 
 class Get_Base_Info():
-    def __init__(self, template_maker):
+    def __init__(self, template_maker, jar_path):
         self.stat = template_maker.stat["Get_Base_Info"]
 
+        self.jar_path = jar_path "/home/hirose/git/Debug_Concierge/Template_Maker/BaseInfo.jar"
+
     def run(self, template_id, q_path, a_path, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions):
-        jar_path = "/Users/HiroseMasayuki/Documents/Git/Debug_Concierge/Template_Maker/BaseInfo.jar"
         lines = " ".join(map(str, [q_start, q_end, a_start, a_end]))
         exclusions = ",".join(map(str, q_exclusions)) + " " + ",".join(map(str, a_exclusions))
         #out_path = "/Users/HiroseMasayuki/Documents/Git/Debug_Concierge"
