@@ -23,7 +23,9 @@ class Get_Base_Info():
     def run(self, template_id, q_path, a_path, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions):
         jar_path = "/Users/HiroseMasayuki/Documents/Git/Debug_Concierge/Template_Maker/BaseInfo.jar"
         lines = " ".join(map(str, [q_start, q_end, a_start, a_end]))
-        exclusions = ",".join(map(str, q_exclusions)) + " " + ",".join(map(str, a_exclusions))
+        exclusions = "-1" if len(q_exclusions) == 0 else ",".join(map(str, q_exclusions)) 
+        exclusions += " " 
+        exclusions += "-1" if len(a_exclusions)==0 else ",".join(map(str, a_exclusions))
         #out_path = "/Users/HiroseMasayuki/Documents/Git/Debug_Concierge"
         result_dir = "Template_Maker/BaseInfo/result/"+template_id
         if not os.path.exists(result_dir):
