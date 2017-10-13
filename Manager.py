@@ -1,3 +1,4 @@
+#-*- coding:utf-8 -*-
 ## マネージャクラス
 
 import sys
@@ -21,6 +22,7 @@ from DB.DB import DB
 from Bug_Detect.Bug_Detect import Bug_Detect
 from Fix_Modify.Fix_Modify  import Fix_Modify
 from Fix_Evaluation.Fix_Evaluation  import Fix_Evaluation
+from Data_Maker.Data_Maker import Data_Maker
 
 class Manager:
     def __init__(self, db):
@@ -50,23 +52,28 @@ class Manager:
 @click.option('--keyword', help="Keyword for thorwing Query")
 @click.option('--debug_flag', '-D', is_flag=True, help="Flag debug mode")
 @click.option('--article_id', default='', help='target article id (available in debug mode)')
-def cmd(template_make, template_make_status, keyword, debug_flag, article_id):
-    if template_make:
-        # DBオブジェクト
-        cache_write_flag=inifile.getboolean("DB_cache", "cache_write_flag")
-        cache_read_flag=inifile.getboolean("DB_cache", "cache_read_flag")
-        db = DB(cache_write_flag=cache_write_flag, cache_read_flag=cache_read_flag)
+@click.option('--data_make', is_flag=True, help="Data making mode")
+def cmd(template_make, template_make_status, keyword, debug_flag, article_id, data_make):
+    # DBオブジェクト
+    cache_write_flag=inifile.getboolean("DB_cache", "cache_write_flag")
+    cache_read_flag=inifile.getboolean("DB_cache", "cache_read_flag")
+    db = DB(cache_write_flag=cache_write_flag, cache_read_flag=cache_read_flag)
 
+    if template_make:
         # Template_makerオブジェクト
         show_code = inifile.getboolean("Template_Maker", "show_code")
         simple_mode = inifile.getboolean("Template_Maker", "simple_mode")
         tm = Template_Maker(db, show_code=show_code, simple_mode=simple_mode, keyword=keyword, debug_flag=debug_flag, art_id=article_id)
         tm.run()
-        
+
         # Template_makerのstat表示
         if template_make_status:
             tm.stat["correct"] = tm.stat["total"] - tm.stat["no_code"] - tm.stat["no_best_answer"] - tm.stat["not_compilable"]
             print(tm.stat)
+    elif data_make:
+        out_path = inifile["Data_Maker"]["out_path"]
+        data_maker = Data_Maker(db, out_path, keyword=keyword)
+        data_maker.run()
     else:
         db = DB()
 
@@ -78,4 +85,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
+
