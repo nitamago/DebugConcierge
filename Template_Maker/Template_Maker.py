@@ -88,20 +88,22 @@ class Template_Maker:
                 print("aborted")
                 continue
 
-            #ベストアンサーを持たなければスキップ
+            # ベストアンサーを持たなければスキップ
+            """
             if not "AcceptedAnswerId" in json["hits"]["hits"][i]["_source"]:
                 logger.debug("No.{0} don't contain best answer".format(i))
                 self.stat["no_best_answer"] += 1
                 continue
             best_answer_id = json["hits"]["hits"][i]["_source"]["AcceptedAnswerId"]
+            """
 
-            #answer側の投稿を取り寄せる
-            a_json = self.db.get_best_answer_record(best_answer_id)
-            a_source = a_json["hits"]["hits"][0]["_source"]
-            a_body_str = a_source["Body"]
-            a_plain_str = self.plain(a_body_str)
+            # answer側の投稿を取り寄せる
+            # a_json = self.db.get_best_answer_record(best_answer_id)
+            a_json = self.db.get_records_by_parent_id(q_id)
+            a_hits = a_json["hits"]["hits"]
 
             #<code>が含まれているか
+            """
             if q_plain_str.find("<code>") < 0:
                 logger.debug("No.{0} question don't contain code block".format(i))
                 self.stat["no_code"] += 1
@@ -110,35 +112,42 @@ class Template_Maker:
                 logger.debug("No.{0} Answer don't contain code block".format(i))
                 self.stat["no_code"] += 1
                 continue
+            """
 
-            #テンプレート化する
-            try:
-                print("## {0} is being Templated #Score: {1} ##############".format(q_id, q_score))
-                # テンプレートの下地を作る
-                t = self.convert_template(i, q_id, q_plain_str, a_plain_str)
-                print("# converted to base template!")
+            for a_hit in a_hits:
+                a_source = a_hit["_source"]
+                a_id = a_source["Id"]
+                a_body_str = a_source["Body"]
+                a_plain_str = self.plain(a_body_str)
+                #テンプレート化する
+                try:
+                    print("## {0} is being Templated #Score: {1} ##############".format(q_id, q_score))
+                    # テンプレートの下地を作る
+                    t = self.convert_template(i, q_id, a_id, q_plain_str, a_plain_str)
+                    print("# converted to base template!")
 
-                # クローンの検出
-                self.clone_detecter.run(t)
-                print("# clone detection finished!")
+                    # クローンの検出
+                    self.clone_detecter.run(t)
+                    print("# clone detection finished!")
 
-                # クローン情報の解析
-                diff_info_list = self.clone_analyzer.run(t)
-                print("# clone analysis finished!")
+                    # クローン情報の解析
+                    diff_info_list = self.clone_analyzer.run(t)
+                    print("# clone analysis finished!")
                 
-                # 下地の編集
-                t.set_diff_info(diff_info_list)
-                self.db.put_template(t)
-            except ConvertError:
-                self.stat["not_compilable"] += 1
-                print("Failed")
-            """
-            except Exception:
-                self.stat["not_compilable"] += 1
-                print("Unknown Exception")
-            """
+                    # 下地の編集
+                    t.set_diff_info(diff_info_list)
+                    self.db.put_template(t)
 
-        self.db.write_template()
+                except ConvertError:
+                    self.stat["not_compilable"] += 1
+                    print("Failed")
+            
+                # For Debug
+                if self.debug_flag and q_id == self.art_id:
+                    print("aborted")
+                    break
+
+            self.db.write_template()
 
     def plain(self, s):
         #余分なタグを外す
@@ -146,20 +155,20 @@ class Template_Maker:
         s = s.replace("<p>", "").replace("</p>", "\n")
         return s.replace("&gt;", ">").replace("&lt;", "<")
 
-    def convert_template(self, i, q_id, q_plain_str, a_plain_str):
+    def convert_template(self, i, q_id, a_id, q_plain_str, a_plain_str):
         try:
             q_codes = self.convert_compilable(i, "Q", q_id, q_plain_str)
-            a_codes = self.convert_compilable(i, "A", q_id, a_plain_str)
+            a_codes = self.convert_compilable(i, "A", a_id, a_plain_str)
         except ConvertError:
             raise ConvertError
         
-        return Template(tmplt_id=q_id, target_code=q_codes, modify_code=a_codes, api_tag="", apply_constraint="")
+        return Template(tmplt_id=q_id+"-"+a_id, target_code=q_codes, modify_code=a_codes, api_tag="", apply_constraint="")
 
     #コンパイル可能なコードのリストを返す
-    def convert_compilable(self, i, q_or_a, q_id, plain_str):
+    def convert_compilable(self, i, q_or_a, art_id, plain_str):
         #p = re.compile("<code>[^(</code>)]*</code>", re.DOTALL)
         p = re.compile("<code>.*?</code>", re.DOTALL)
-        logger.debug("No.{0}-{1}#{2}#################".format(i, q_or_a, q_id))
+        logger.debug("No.{0}-{1}#{2}#################".format(i, q_or_a, art_id))
 
         codes = []
         for line in p.findall(plain_str):

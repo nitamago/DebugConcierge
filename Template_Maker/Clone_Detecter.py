@@ -8,7 +8,14 @@ from distutils.dir_util import copy_tree
 import glob
 import sys
 from logging import getLogger, StreamHandler, NullHandler, DEBUG
+import configparser
 
+# Setting for reading inifile
+inifile = configparser.ConfigParser()
+inifile.read("config.ini")
+
+
+# Setting for Logger
 logger = getLogger(__name__)
 handler = StreamHandler()
 #handler = NullHandler()
@@ -19,11 +26,11 @@ logger.addHandler(handler)
 class Clone_Detecter:
     def __init__(self, min_detect_line_num,  show_code=True, simple_mode=True):
         #self.exe_path = os.path.dirname(os.path.abspath(__file__))
-        self.scorpio_dir = "Template_Maker/Code_Clone/scorpio.jar"
-        self.q_codes_dir = "Template_Maker/Code_Clone/Question_codes"
-        self.a_codes_dir = "Template_Maker/Code_Clone/Answer_codes"
-        self.clone_result_dir = "Template_Maker/Code_Clone/result/"
-        self.store_dir = "Template_Maker/Code_Clone/store/"
+        self.scorpio_dir = inifile["Clone_Detecter"]["scorpio_dir"]
+        self.q_codes_dir = inifile["Clone_Detecter"]["q_codes_dir"]
+        self.a_codes_dir = inifile["Clone_Detecter"]["a_codes_dir"]
+        self.clone_result_dir = inifile["Clone_Detecter"]["clone_result_dir"]
+        self.store_dir = inifile["Clone_Detecter"]["store_dir"]
         self.scorpio_run_command = "java -jar {0} -d {1} -ad {2} -cross on -o {3} -s {4} -t 2 > /dev/null"
         self.min_detect_line_num = min_detect_line_num
         

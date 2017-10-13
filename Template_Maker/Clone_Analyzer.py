@@ -13,7 +13,7 @@ from Template_Maker.Strategy.Get_Base_Info import Get_Base_Info
 
 logger = getLogger(__name__)
 handler = StreamHandler()
-#handler = NullHandler()
+handler = NullHandler()
 handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)

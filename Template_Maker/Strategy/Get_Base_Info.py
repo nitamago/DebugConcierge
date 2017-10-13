@@ -19,8 +19,7 @@ import subprocess
 class Get_Base_Info():
     def __init__(self, template_maker, jar_path):
         self.stat = template_maker.stat["Get_Base_Info"]
-
-        self.jar_path = jar_path "/home/hirose/git/Debug_Concierge/Template_Maker/BaseInfo.jar"
+        self.jar_path = jar_path 
 
     def run(self, template_id, q_path, a_path, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions):
         lines = " ".join(map(str, [q_start, q_end, a_start, a_end]))
@@ -31,7 +30,7 @@ class Get_Base_Info():
         result_dir = "Template_Maker/BaseInfo/result/"+template_id
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
-        self.command = "java -jar {0} {1} {2} {3} {4} {5}".format(jar_path, q_path, a_path, result_dir, lines, exclusions)
+        self.command = "java -jar {0} {1} {2} {3} {4} {5}".format(self.jar_path, q_path, a_path, result_dir, lines, exclusions)
 
         print(self.command)
         subprocess.call(self.command, shell=True)
