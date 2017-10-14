@@ -68,12 +68,20 @@ class DB:
                 },
                 "size" : size,
             }
-            res = self.es.search(index = self.index, doc_type = doc_type, body = query)
+            res = self.es.search(index = self.index, doc_type = doc_type, scroll = '1m', body = query)
             if self.cache_write_flag:
                 f = open("DB/DB.cache", "bw")
                 pickle.dump(res, f)
                 f.close()
         return res
+
+    def scroll(self, sid):
+        page = self.es.scroll(scroll_id = sid, scroll = '2m')
+        scroll_size = len(page['hits']['hits'])
+        if scroll_size > 0:
+            return page
+        else:
+            return None
 
     def get_best_answer_record(self, kywd):
         query = {

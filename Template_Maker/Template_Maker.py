@@ -67,17 +67,25 @@ class Template_Maker:
     def run(self):
         print("Template Maker running")
         #javaタグを持つ質問を読み出す
-        json = self.db.get_records_by_tag(self.keyword, self.db.q_doc_type, self.stat["total"])
+        page = self.db.get_records_by_tag(self.keyword, self.db.q_doc_type, self.stat["total"])
         # javaタグの関連記事の総数
-        #total_count = json["hits"]["total"]
+        #total_count = page["hits"]["total"]
         #self.stat["total"] = total_count
-        #json = self.db.get_records_by_tag("java", self.db.q_doc_type, total_count)
+        #page = self.db.get_records_by_tag("java", self.db.q_doc_type, total_count)
 
-        print(json["hits"]["hits"][0]["_source"].keys())
+        sid = page['_scroll_id']
+        total = 0
+        while page is not None:
+            page = self.db.scroll(sid)
+            sid = page['_scroll_id']
+            total += len(page['hits']['hits'])
+            self.process_page(page)
+        print("total: {0}".format(total))
+
+    def process_page(self, page):
         exit_flag = False
-        for i in range(0, self.stat["total"]):
-        #for i in range(0, json["hits"]["total"]):
-            q_source = json["hits"]["hits"][i]["_source"]
+        for i in range(0, len(page["hits"]["hits"])):
+            q_source = page["hits"]["hits"][i]["_source"]
             q_id = q_source["Id"]
             q_body_str = q_source["Body"]
             q_plain_str = self.plain(q_body_str)
@@ -90,17 +98,17 @@ class Template_Maker:
 
             # ベストアンサーを持たなければスキップ
             """
-            if not "AcceptedAnswerId" in json["hits"]["hits"][i]["_source"]:
+            if not "AcceptedAnswerId" in page["hits"]["hits"][i]["_source"]:
                 logger.debug("No.{0} don't contain best answer".format(i))
                 self.stat["no_best_answer"] += 1
                 continue
-            best_answer_id = json["hits"]["hits"][i]["_source"]["AcceptedAnswerId"]
+            best_answer_id = page["hits"]["hits"][i]["_source"]["AcceptedAnswerId"]
             """
 
             # answer側の投稿を取り寄せる
-            # a_json = self.db.get_best_answer_record(best_answer_id)
-            a_json = self.db.get_records_by_parent_id(q_id)
-            a_hits = a_json["hits"]["hits"]
+            # a_page = self.db.get_best_answer_record(best_answer_id)
+            a_page = self.db.get_records_by_parent_id(q_id)
+            a_hits = a_page["hits"]["hits"]
 
             #<code>が含まれているか
             """
