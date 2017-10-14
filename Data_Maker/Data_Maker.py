@@ -74,21 +74,34 @@ class Data_Maker:
         print("Data Maker running")
 
         # javaタグを持つ質問を読み出す
-        json = self.db.get_records_by_tag(
+        page = self.db.get_records_by_tag(
                 self.keyword, self.db.q_doc_type, self.stat["total"])
 
         # javaタグの関連記事の総数
         print("keyword: {0}, result count {1}".format(
-            self.keyword, json["hits"]["hits"][0]["_source"].keys()))
+            self.keyword, page["hits"]["hits"][0]["_source"].keys()))
 
+        total = 0
+        sid = page["_scroll_id"]
+        while page is not None:
+            page = self.db.scroll(sid)
+            sid = page["_scroll_id"]
+            total += len(page['hits']['hits'])
+            self.process_page(page, app)
+        print("total: {0}".format(total))
+
+        # プロセスをkill
+        gateway.shutdown()
+
+    def process_page(self, page, app):
         for i in range(0, self.stat["total"]):
-            q_source = json["hits"]["hits"][i]["_source"]
+            q_source = page["hits"]["hits"][i]["_source"]
             q_id = q_source["Id"]
 
             # answer側の投稿を取り寄せる
-            # a_jsons = self.db.get_best_answer_record(best_answer_id)
-            a_json = self.db.get_records_by_parent_id(q_id)
-            a_sources = a_json["hits"]["hits"]
+            # a_pages = self.db.get_best_answer_record(best_answer_id)
+            a_page = self.db.get_records_by_parent_id(q_id)
+            a_sources = a_page["hits"]["hits"]
 
             """
             #<code>が含まれているか
@@ -122,9 +135,6 @@ class Data_Maker:
                 except ConvertError:
                     self.stat["not_compilable"] += 1
                     print("Failed")
-
-        # プロセスをkill
-        gateway.shutdown()
 
     # 生データの抽出
     def get_raw_data(self, q_source, a_source):
