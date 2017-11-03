@@ -21,6 +21,7 @@ handler = NullHandler()
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 
+# configファイルの読み込み
 inifile = configparser.ConfigParser()
 inifile.read("config.ini")
 
@@ -42,23 +43,19 @@ class Data_Maker:
         self.simple_mode = simple_mode
         self.keyword = keyword
 
+        self.scroll_size = 10000
+
         # For debug
         self.debug_flag = debug_flag
         self.art_id = art_id
-
-        self.stat = {}
-        self.stat["total"] = 10000
-        self.stat["correct"] = 0
-        self.stat["no_code"] = 0
-        self.stat["not_compilable"] = 0
-        self.stat["no_best_answer"] = 0
-
-        self.unregistered = []
 
         # configファイルからの読み込み
         self.out_path = inifile["Data_Maker"]["out_path"]
         self.py4j_jar_path = inifile["Data_Maker"]["py4j_jar_path"]
         self.jar_path = inifile["Data_Maker"]["jar_path"]
+    
+        self.base_info_dir = inifile["Data_Maker"]["base_info_dir"]
+        self.id_pairs = self.get_id_pairs(self.base_info_dir)
 
     def run(self):
         # クラスパスを指定して実行
@@ -75,7 +72,7 @@ class Data_Maker:
 
         # javaタグを持つ質問を読み出す
         page = self.db.get_records_by_tag(
-                self.keyword, self.db.q_doc_type, self.stat["total"])
+                self.keyword, self.db.q_doc_type, self.scroll_size)
 
         # javaタグの関連記事の総数
         print("keyword: {0}, result count {1}".format(
@@ -88,13 +85,14 @@ class Data_Maker:
             sid = page["_scroll_id"]
             total += len(page['hits']['hits'])
             self.process_page(page, app)
+            print("{0} is done".format(total))
         print("total: {0}".format(total))
 
         # プロセスをkill
         gateway.shutdown()
 
     def process_page(self, page, app):
-        for i in range(0, self.stat["total"]):
+        for i in range(0, self.scroll_size):
             q_source = page["hits"]["hits"][i]["_source"]
             q_id = q_source["Id"]
 
@@ -120,11 +118,16 @@ class Data_Maker:
             # データを抽出する
             for j in range(0, len(a_sources)):
                 try:
+                    # q_idとa_idのペアが差分としてあるか
+                    a_source = a_sources[j]["_source"]
+                    a_id = a_source["Id"]
+                    if q_id+"-"+a_id not in self.id_pairs:
+                        continue
+
                     print("# ID:{0} is being extracted # Pair({1},{2})".format(
                         q_id, i, j))
                     # 生データの抽出
-                    raw_data = self.get_raw_data(q_source,
-                                                 a_sources[j]["_source"])
+                    raw_data = self.get_raw_data(q_source, a_source)
 
                     # データの整形
                     shaped_data = self.shape_data(app, raw_data)
@@ -133,7 +136,7 @@ class Data_Maker:
                     self.write(self.out_path, shaped_data)
 
                 except ConvertError:
-                    self.stat["not_compilable"] += 1
+                    # self.stat["not_compilable"] += 1
                     print("Failed")
 
     # 生データの抽出
@@ -163,25 +166,76 @@ class Data_Maker:
         q_id = raw_data["q_id"]
         a_id = raw_data["a_id"]
         for q_src in raw_data["q_codes"]:
+            # token列の取得
             # q_tokens = list(javalang.tokenizer.tokenize(q_src))
             q_tokens = app.get_token(q_src)
 
-            for a_src in raw_data["a_codes"]:
-                # a_tokens = list(javalang.tokenizer.tokenize(a_src))
+            # ディレクトリの確認
+            q_anchor_path = self.base_info_dir+"/"+q_id+"-"+a_id+"/q_anchor.txt"
+            a_anchor_path = self.base_info_dir+"/"+q_id+"-"+a_id+"/a_anchor.txt"
+            addition_path = self.base_info_dir+"/"+q_id+"-"+a_id+"/addition.txt"
+            if not os.path.exists(q_anchor_path):
+                continue
+            if not os.path.exists(a_anchor_path):
+                continue
+            if not os.path.exists(addition_path):
+                continue
 
-                # FIXME javaで実装した方がいい
-                # fixed_tokens = self.replace_literal(tokens)
-                a_tokens = app.get_token(a_src)
-                ret.append([q_id, a_id, q_tokens, a_tokens])
+            # recommendの整形
+            q_anchor = []
+            with open(q_anchor_path) as f:
+                for line in f:
+                    content = line.split(" ", 2)
+                    index = int(content[1])
+                    code = content[2].replace("\n", "")
+                    q_anchor.append((index, code))
+            
+            a_anchor = []
+            with open(a_anchor_path) as f:
+                for line in f:
+                    content = line.split(" ", 2)
+                    index = int(content[1])
+                    code = content[2].replace("\n", "")
+                    a_anchor.append((index, code))
+
+
+            recommends = []
+            with open(addition_path) as f:
+                for line in f:
+                    content = line.split(" ", 2)
+                    index = int(content[1])
+                    code = content[2].replace("\n", "")
+                    line_in_clone = -1
+                    for i in range(0, len(a_anchor)):
+                        if a_anchor[i][0] > index:
+                            line_in_clone = i
+                        elif line_in_clone == -1:
+                            if len(q_anchor) > 0:
+                                recommends.append(
+                                    app.get_token(code)+" <before> "+app.get_token(q_anchor[0][1]))
+                            else:
+                                recommends.append("<add> "+app.get_token(code))
+                            break
+                        else:
+                            recommends.append(
+                                app.get_token(code)+" <after> "+app.get_token(q_anchor[line_in_clone][1]))
+                            break
+            if len(recommends) == 0:
+                recommend_str = "<end>"
+            else:
+                recommend_str = " <end> ".join(recommends) + " <end>"
+
+            ret.append([q_id, a_id, q_tokens, recommend_str])
         return ret
 
     # データの書き出し
     def write(self, out_path, data_list):
         with open(out_path+"/input.txt", "a") as f_i:
             with open(out_path+"/output.txt", "a") as f_o:
-                for q_id, a_id, q_token, a_token in data_list:
-                    f_i.write("{0}-{1} {2}\n".format(q_id, a_id, q_token.replace('\n', '<br>')))
-                    f_o.write("{0}-{1} {2}\n".format(q_id, a_id, a_token))
+                for i, (q_id, a_id, q_token, a_token) in enumerate(data_list):
+                    f_i.write("{0}-{1} {2} {3}\n".format(
+                        q_id, a_id, i, q_token.replace('\n', '<br>')))
+                    f_o.write("{0}-{1} {2} {3}\n".format(q_id, a_id, i, a_token))
 
     # 余分なタグを外す
     def plain(self, s):
@@ -337,6 +391,10 @@ class Data_Maker:
 
     def close_bracket(self, code):
         return code+"}"
+
+    def get_id_pairs(self, info_dir):
+        ids = os.listdir(path=info_dir)
+        return set(ids)
 
 
 class ConvertError(Exception):
