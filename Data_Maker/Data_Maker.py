@@ -58,11 +58,13 @@ class Data_Maker:
         self.id_pairs = self.get_id_pairs(self.base_info_dir)
 
     def run(self):
+        # java gatewayサーバーを立ち上げる
         # クラスパスを指定して実行
         args = (["java",
                  "-cp", self.py4j_jar_path,
                  "-jar", self.jar_path])
         subprocess.Popen(args)
+
         # サーバー起動前に処理が下へ行くのを防ぐ
         time.sleep(3)
         gateway = JavaGateway(start_callback_server=True)

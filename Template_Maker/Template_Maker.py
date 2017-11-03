@@ -1,11 +1,6 @@
-# テンプレートを作るクラス
-import os, sys
-sys.path.append(os.getcwd())
-
+# -*- coding:utf-8 -*-
+import sys
 import configparser
-inifile = configparser.ConfigParser()
-inifile.read("config.ini")
-
 from DB.DB import DB
 from Template_Maker.Template import Template
 from Template_Maker.Clone_Detecter import Clone_Detecter
@@ -14,6 +9,10 @@ import re
 import javalang
 from javalang.tree import *
 from logging import getLogger, StreamHandler, NullHandler, DEBUG
+import os
+import time
+
+sys.path.append(os.getcwd())
 
 logger = getLogger(__name__)
 handler = StreamHandler()
@@ -22,10 +21,10 @@ handler = NullHandler()
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 
-import configparser
 inifile = configparser.ConfigParser()
 inifile.read("config.ini")
 
+# テンプレートを作るクラス
 class Template_Maker:
     preference = {"MethodContent": True, "ClassContent": True, "CheckSemicolon": True, "CloseBracket": True }
 
@@ -40,6 +39,8 @@ class Template_Maker:
         self.debug_flag = debug_flag
         self.art_id = art_id
 
+        self.scroll_size = 100
+        
         self.stat = {}
         self.stat["total"] = 10000
         self.stat["correct"] = 0
@@ -67,7 +68,7 @@ class Template_Maker:
     def run(self):
         print("Template Maker running")
         #javaタグを持つ質問を読み出す
-        page = self.db.get_records_by_tag(self.keyword, self.db.q_doc_type, self.stat["total"])
+        page = self.db.get_records_by_tag(self.keyword, self.db.q_doc_type, self.scroll_size)
         # javaタグの関連記事の総数
         #total_count = page["hits"]["total"]
         #self.stat["total"] = total_count
@@ -75,11 +76,15 @@ class Template_Maker:
 
         sid = page['_scroll_id']
         total = 0
+        start = time.time()
         while page is not None:
             page = self.db.scroll(sid)
             sid = page['_scroll_id']
             total += len(page['hits']['hits'])
             self.process_page(page)
+            elapsed_time = time.time() - start
+            print("count: {0}, process_time: {1}".format(total, elapsed_time))
+            start = time.time()
         print("total: {0}".format(total))
 
     def process_page(self, page):

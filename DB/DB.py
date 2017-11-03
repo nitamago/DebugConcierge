@@ -65,8 +65,7 @@ class DB:
                     "term" : {
                         "Tags" : kywd,
                     }
-                },
-                "size" : size,
+                }
             }
             res = self.es.search(index = self.index, doc_type = doc_type, scroll = '1m', body = query)
             if self.cache_write_flag:
