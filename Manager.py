@@ -47,18 +47,21 @@ class Manager:
 
 
 @click.command()
-@click.option('--template_make', '-t', is_flag=True, help="Flag whether making Template pr not")
-@click.option('--template_make_status', '-s', is_flag=True, help="Flag whether making status or not")
+@click.option('--template_make', is_flag=True, help="Template making mode")
+@click.option('--data_make', is_flag=True, help="Data making mode")
+@click.option('--auto_fix', is_flag=True, help="Auto fixing mode")
 @click.option('--keyword', help="Keyword for thorwing Query")
+@click.option('--template_make_status', '-s', is_flag=True, help="Flag whether making status or not")
 @click.option('--debug_flag', '-D', is_flag=True, help="Flag debug mode")
 @click.option('--article_id', default='', help='target article id (available in debug mode)')
-@click.option('--data_make', is_flag=True, help="Data making mode")
-def cmd(template_make, template_make_status, keyword, debug_flag, article_id, data_make):
+def cmd(template_make, data_make, auto_fix, 
+        keyword, template_make_status, debug_flag, article_id):
     # DBオブジェクト
     cache_write_flag=inifile.getboolean("DB_cache", "cache_write_flag")
     cache_read_flag=inifile.getboolean("DB_cache", "cache_read_flag")
     db = DB(cache_write_flag=cache_write_flag, cache_read_flag=cache_read_flag)
 
+    # テンプレート作成モード
     if template_make:
         # Template_makerオブジェクト
         show_code = inifile.getboolean("Template_Maker", "show_code")
@@ -70,15 +73,18 @@ def cmd(template_make, template_make_status, keyword, debug_flag, article_id, da
         if template_make_status:
             tm.stat["correct"] = tm.stat["total"] - tm.stat["no_code"] - tm.stat["no_best_answer"] - tm.stat["not_compilable"]
             print(tm.stat)
+    # データ作成モード
     elif data_make:
         out_path = inifile["Data_Maker"]["out_path"]
         data_maker = Data_Maker(db, out_path, keyword=keyword)
         data_maker.run()
+    # 自動バグ修正モード(未実装)
+    elif auto_fix:
+        manager = Manager(db)
+        manager.run()
     else:
-        db = DB()
-
-    manager = Manager(db)
-    manager.run()
+        print("Need mode keyword")
+        sys.exit()
 
 def main():
     cmd()
