@@ -10,6 +10,7 @@ import configparser
 from py4j.java_gateway import JavaGateway
 import subprocess
 import time
+import glob
 
 sys.path.append(os.getcwd())
 
@@ -38,12 +39,11 @@ class Data_Maker:
                  keyword="java", debug_flag=False, art_id=-1):
 
         logger.debug("Data Maker initialized")
-        self.db = db
         self.show_code = show_code
         self.simple_mode = simple_mode
         self.keyword = keyword
 
-        self.scroll_size = 10000
+        self.scroll_size = 1000
 
         # For debug
         self.debug_flag = debug_flag
@@ -72,163 +72,109 @@ class Data_Maker:
 
         print("Data Maker running")
 
-        # javaタグを持つ質問を読み出す
-        page = self.db.get_records_by_tag(
-                self.keyword, self.db.q_doc_type, self.scroll_size)
 
-        # javaタグの関連記事の総数
-        print("keyword: {0}, result count {1}".format(
-            self.keyword, page["hits"]["hits"][0]["_source"].keys()))
-
+        # 中間データの読み込み
         total = 0
-        sid = page["_scroll_id"]
-        while page is not None:
-            page = self.db.scroll(sid)
-            sid = page["_scroll_id"]
-            total += len(page['hits']['hits'])
-            self.process_page(page, app)
+        for directory in glob.glob(self.base_info_dir):
+            self.process_page(directory, app)
+            total += 1
             print("{0} is done".format(total))
         print("total: {0}".format(total))
 
         # プロセスをkill
         gateway.shutdown()
 
-    def process_page(self, page, app):
-        for i in range(0, self.scroll_size):
-            q_source = page["hits"]["hits"][i]["_source"]
-            q_id = q_source["Id"]
+    def process_page(self, directory, app):
+        q_source = ""
+        with open(directory+"/q_src.java") as f:
+            q_source = f.read()
+        a_source = ""
+        with open(directory+"/a_src.java") as f:
+            a_source = f.read()
 
-            # answer側の投稿を取り寄せる
-            # a_pages = self.db.get_best_answer_record(best_answer_id)
-            a_page = self.db.get_records_by_parent_id(q_id)
-            a_sources = a_page["hits"]["hits"]
+        q_id, a_id = directory.split("/")[-1].split("-")
 
-            """
-            #<code>が含まれているか
-            if q_plain_str.find("<code>") < 0:
-                logger.debug(
-                "No.{0} question don't contain code block".format(i))
-                self.stat["no_code"] += 1
-                continue
-            elif a_plain_str.find("<code>") < 0:
-                logger.debug(
-                "No.{0} Answer don't contain code block".format(i))
-                self.stat["no_code"] += 1
-                continue
-            """
+        print("# ID:{0} is being extracted # Pair({1})".format(
+                        q_id, directory.split("/")[-1]))
 
-            # データを抽出する
-            for j in range(0, len(a_sources)):
-                try:
-                    # q_idとa_idのペアが差分としてあるか
-                    a_source = a_sources[j]["_source"]
-                    a_id = a_source["Id"]
-                    if q_id+"-"+a_id not in self.id_pairs:
-                        continue
+        # データの整形
+        data = {"q_id": q_id, "a_id": a_id,
+                "q_src": q_source, "a_src": a_source}
+        shaped_data = self.shape_data(app, data, directory)
 
-                    print("# ID:{0} is being extracted # Pair({1},{2})".format(
-                        q_id, i, j))
-                    # 生データの抽出
-                    raw_data = self.get_raw_data(q_source, a_source)
-
-                    # データの整形
-                    shaped_data = self.shape_data(app, raw_data)
-
-                    # データの書き出し
-                    self.write(self.out_path, shaped_data)
-
-                except ConvertError:
-                    # self.stat["not_compilable"] += 1
-                    print("Failed")
-
-    # 生データの抽出
-    def get_raw_data(self, q_source, a_source):
-        q_id = q_source["Id"]
-        q_body_str = q_source["Body"]
-        q_plain_str = self.plain(q_body_str)
-        q_score = q_source["Score"]
-
-        a_id = a_source["Id"]
-        a_body_str = a_source["Body"]
-        a_plain_str = self.plain(a_body_str)
-        a_score = a_source["Score"]
-
-        try:
-            q_codes = self.convert_compilable("Q", q_id, q_plain_str)
-            a_codes = self.convert_compilable("A", q_id, a_plain_str)
-        except ConvertError:
-            raise ConvertError
-
-        return {"q_id": q_id, "q_codes": q_codes, "q_score": q_score,
-                "a_id": a_id, "a_codes": a_codes, "a_score": a_score}
+        # データの書き出し
+        self.write(self.out_path, shaped_data)
 
     # データの整形
-    def shape_data(self, app, raw_data):
+    def shape_data(self, app, data, directory):
         ret = []
-        q_id = raw_data["q_id"]
-        a_id = raw_data["a_id"]
-        for q_src in raw_data["q_codes"]:
-            # token列の取得
-            # q_tokens = list(javalang.tokenizer.tokenize(q_src))
-            q_tokens = app.get_token(q_src)
+        q_id = data["q_id"]
+        a_id = data["a_id"]
+        q_src = data["q_src"]
+        a_src = data["a_src"]
+        
+        q_tokens = app.get_token(q_src)
+        a_tokens = app.get_token(a_src)
 
-            # ディレクトリの確認
-            q_anchor_path = self.base_info_dir+"/"+q_id+"-"+a_id+"/q_anchor.txt"
-            a_anchor_path = self.base_info_dir+"/"+q_id+"-"+a_id+"/a_anchor.txt"
-            addition_path = self.base_info_dir+"/"+q_id+"-"+a_id+"/addition.txt"
-            if not os.path.exists(q_anchor_path):
-                continue
-            if not os.path.exists(a_anchor_path):
-                continue
-            if not os.path.exists(addition_path):
-                continue
+        # ディレクトリの確認
+        q_anchor_path = directory+"/q_anchor.txt"
+        a_anchor_path = directory+"/a_anchor.txt"
+        addition_path = directory+"/addition.txt"
+        if not os.path.exists(q_anchor_path):
+            print(directory+" does not exists")
+            exit()
+        if not os.path.exists(a_anchor_path):
+            print(directory+" does not exists")
+            exit()
+        if not os.path.exists(addition_path):
+            print(directory+" does not exists")
+            exit()
 
-            # recommendの整形
-            q_anchor = []
-            with open(q_anchor_path) as f:
-                for line in f:
-                    content = line.split(" ", 2)
-                    index = int(content[1])
-                    code = content[2].replace("\n", "")
-                    q_anchor.append((index, code))
+        # recommendの整形
+        q_anchor = []
+        with open(q_anchor_path) as f:
+            for line in f:
+                content = line.split(" ", 2)
+                index = int(content[1])
+                code = content[2].replace("\n", "")
+                q_anchor.append((index, code))
             
-            a_anchor = []
-            with open(a_anchor_path) as f:
-                for line in f:
-                    content = line.split(" ", 2)
-                    index = int(content[1])
-                    code = content[2].replace("\n", "")
-                    a_anchor.append((index, code))
+        a_anchor = []
+        with open(a_anchor_path) as f:
+            for line in f:
+                content = line.split(" ", 2)
+                index = int(content[1])
+                code = content[2].replace("\n", "")
+                a_anchor.append((index, code))
 
-
-            recommends = []
-            with open(addition_path) as f:
-                for line in f:
-                    content = line.split(" ", 2)
-                    index = int(content[1])
-                    code = content[2].replace("\n", "")
-                    line_in_clone = -1
-                    for i in range(0, len(a_anchor)):
-                        if a_anchor[i][0] > index:
-                            line_in_clone = i
-                        elif line_in_clone == -1:
-                            if len(q_anchor) > 0:
-                                recommends.append(
-                                    app.get_token(code)+" <before> "+app.get_token(q_anchor[0][1]))
-                            else:
-                                recommends.append("<add> "+app.get_token(code))
-                            break
-                        else:
+        recommends = []
+        with open(addition_path) as f:
+            for line in f:
+                content = line.split(" ", 2)
+                index = int(content[1])
+                code = content[2].replace("\n", "")
+                line_in_clone = -1
+                for i in range(0, len(a_anchor)):
+                    if a_anchor[i][0] > index:
+                        line_in_clone = i
+                    elif line_in_clone == -1:
+                        if len(q_anchor) > 0:
                             recommends.append(
-                                app.get_token(code)+" <after> "+app.get_token(q_anchor[line_in_clone][1]))
+                                    app.get_token(code)+" <before> "+app.get_token(q_anchor[0][1]))
+                        else:
+                            recommends.append("<add> "+app.get_token(code))
                             break
-            if len(recommends) == 0:
-                recommend_str = "<end>"
-            else:
-                recommend_str = " <end> ".join(recommends) + " <end>"
-
-            ret.append([q_id, a_id, q_tokens, recommend_str])
-        return ret
+                    else:
+                        recommends.append(
+                                app.get_token(code)+" <after> "+app.get_token(q_anchor[line_in_clone][1]))
+                        break
+                if len(recommends) == 0:
+                    recommend_str = "<end>"
+                else:
+                    recommend_str = " <end> ".join(recommends) + " <end>"
+                
+                ret.append([q_id, a_id, q_tokens, recommend_str])
+            return ret
 
     # データの書き出し
     def write(self, out_path, data_list):
