@@ -51,9 +51,8 @@ class Data_Maker:
 
         # configファイルからの読み込み
         self.out_path = inifile["Data_Maker"]["out_path"]
-        self.py4j_jar_path = inifile["Data_Maker"]["py4j_jar_path"]
+        self.py4j_jar_path = inifile["Enviroment"]["py4j_jar_path"]    
         self.jar_path = inifile["Data_Maker"]["jar_path"]
-    
         self.base_info_dir = inifile["Data_Maker"]["base_info_dir"]
         self.id_pairs = self.get_id_pairs(self.base_info_dir)
 
