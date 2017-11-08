@@ -61,6 +61,7 @@ class DB:
             f.close()
         else:
             query = {
+                "size": size,
                 "query": {
                     "term" : {
                         "Tags" : kywd,
@@ -129,12 +130,16 @@ class DB:
 
     def put_template(self, template):
         print("Put template "+template.tmplt_id)
-        self.templates[template.tmplt_id] = template
+        # self.templates[template.tmplt_id] = template
+        print("put_template not implemented")
 
     def get_template(self, template_id):
         return self.templates[template_id]
 
     def write_template(self):
+        # FIXME
+        print("write_template is not implemented")
+        return
         f = open("DB/Templates/Template.txt")
         template_txt = f.read()
         f.close()
