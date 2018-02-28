@@ -112,3 +112,4 @@ Template_Maker/Code_Clone/Question_codes/*.java
 Template_Maker/Code_Clone/result/*.xml
 Template_Maker/Code_Clone
 *.tmplt
+*.class
