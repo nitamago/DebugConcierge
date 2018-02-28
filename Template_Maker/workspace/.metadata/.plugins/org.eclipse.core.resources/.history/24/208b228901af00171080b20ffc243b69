@@ -1,0 +1,12 @@
+import org.eclipse.core.internal.localstore.Bucket.Entry;
+import org.eclipse.core.internal.localstore.Bucket.Visitor;
+
+public class TokenVisitor extends Visitor {
+
+	@Override
+	public int visit(Entry arg0) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+}

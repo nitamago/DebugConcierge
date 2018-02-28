@@ -1,0 +1,13 @@
+import java.util.ArrayList;
+
+import org.eclipse.jdt.core.dom.ASTVisitor;
+
+public class TokenVisitor extends ASTVisitor {
+
+	ArrayList<String> tokens;
+	
+	public TokenVisitor(){
+		tokens = new ArrayList<>();
+	}
+
+}

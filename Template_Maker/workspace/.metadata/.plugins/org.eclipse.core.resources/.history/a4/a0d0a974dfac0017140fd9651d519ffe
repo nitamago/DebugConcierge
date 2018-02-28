@@ -1,0 +1,7 @@
+
+public class TupleUtil {
+	private final A ca;
+	private final B cb;
+	
+	
+}

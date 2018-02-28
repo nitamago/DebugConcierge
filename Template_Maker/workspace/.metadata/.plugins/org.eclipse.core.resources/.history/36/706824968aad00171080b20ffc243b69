@@ -1,0 +1,95 @@
+import java.io.*;
+import java.util.ArrayList;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+
+public class Main {
+
+	public static void main(String[] args) {
+		String Q_path = args[0];
+		String A_path = args[1];
+		String Out_path = args[2];
+		int Q_st = Integer.valueOf(args[3]);
+		int Q_end = Integer.valueOf(args[4]);
+		int A_st = Integer.valueOf(args[5]);
+		int A_end = Integer.valueOf(args[6]);
+		
+		String Q_ex = "";
+		String A_ex = "";
+		if (args.length > 7) {
+			String Q_ex = args[7];
+			String A_ex = args[8];
+		}else {
+			
+		}
+		
+		String Q_src = get_src(Q_path);
+		String A_src = get_src(A_path);
+		//System.out.println(Q_src);
+		
+		// Create AST Parser
+		ASTParser q_parser = ASTParser.newParser(AST.JLS8);
+		q_parser.setSource(Q_src.toCharArray());
+		CompilationUnit q_unit = (CompilationUnit) q_parser.createAST(new NullProgressMonitor());
+	
+		// Create AST Parser
+		ASTParser a_parser = ASTParser.newParser(AST.JLS8);
+		a_parser.setSource(Q_src.toCharArray());
+		CompilationUnit a_unit = (CompilationUnit) a_parser.createAST(new NullProgressMonitor());
+			
+		
+		// Visit Node
+		BaseVisitor visitor = new BaseVisitor(Q_st, Q_end,
+				A_st, A_end,
+				Q_ex, A_ex);
+		visitor.visit(q_unit, a_unit);
+		
+		write(Out_path, visitor);
+	}
+
+	public static String get_src(String path){
+		String ret = "";
+		try{
+			  File file = new File(path);
+			  FileReader filereader = new FileReader(file);
+			  BufferedReader br = new BufferedReader(filereader);
+			  
+			  String str = br.readLine();
+			  while(str != null){
+				  ret += str + "\n";
+				  str = br.readLine();
+			  }
+		}catch(FileNotFoundException e){
+			System.out.println(e);
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+		return ret;
+	}
+	
+	private static void write(String path, BaseVisitor visitor){
+		//FIXME
+		write_to(path+"/anchor.txt", visitor.get_anchor());
+		write_to(path+"/addition.txt", visitor.get_addition());
+		write_to(path+"/removal.txt", visitor.get_removal());
+	}
+	
+	private static void write_to(String path, ArrayList<TupleUtil.Triple<Integer, Integer, String>> triples){
+		try {
+			File file = new File(path);
+			FileWriter filewriter = new FileWriter(file);
+			BufferedWriter bw = new BufferedWriter(filewriter);
+			PrintWriter pw = new PrintWriter(bw);
+			for (TupleUtil.Triple<Integer, Integer, String> s : triples) {
+				pw.println(s);
+			}
+			pw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.out.println(e);
+		}
+	}
+}

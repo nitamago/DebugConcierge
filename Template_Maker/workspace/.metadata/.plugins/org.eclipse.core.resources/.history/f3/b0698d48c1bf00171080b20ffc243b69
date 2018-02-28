@@ -1,0 +1,18 @@
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+
+public class Main {
+
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public static void rewrite_variable(){
+		ASTParser q_parser = ASTParser.newParser(AST.JLS8);
+		q_parser.setSource(Q_src.toCharArray());
+		CompilationUnit q_unit = (CompilationUnit) q_parser.createAST(new NullProgressMonitor());
+	}
+}

@@ -1,0 +1,14 @@
+import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.SimpleName;
+
+public class Visitor extends ASTVisitor {
+	public Visitor(){
+		super();
+	}
+	
+	public boolean visit(SimpleName node){
+		String string = node.getFullyQualifiedName();
+		System.out.println(string);
+		return super.visit(node);
+	}
+}

@@ -1,0 +1,36 @@
+import java.util.List;
+
+import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.VariableDeclaration;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.internal.compiler.lookup.VariableBinding;
+
+public class Visitor extends ASTVisitor {
+	public Visitor(){
+		super();
+	}
+	
+	public boolean visit(SimpleName node){
+		String string = node.getFullyQualifiedName();
+		if (node.resolveBinding() instanceof VariableBinding) {
+			System.out.println(string);
+		}
+		return super.visit(node);
+	}
+	
+	public boolean visit(VariableDeclarationFragment node){
+		SimpleName sn = node.getName();
+		System.out.println(sn.toString());
+		return super.visit(node);
+	}
+
+	public boolean visit(MethodInvocation node) {
+		SimpleName sn = node.getName();
+		System.out.println(sn.toString());
+	}
+}

@@ -1,0 +1,105 @@
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.core.internal.resources.VariableDescription;
+import org.eclipse.jdt.core.dom.*;
+import org.eclipse.jdt.internal.eval.VariablesInfo;
+
+public class BaseVisitor extends ASTVisitor {
+	private CompilationUnit CU = null;
+	private String mode = "";
+	private int Q_st, Q_end, A_st, A_end;
+	private ArrayList<Integer> Q_ex, A_ex;
+	private ArrayList<TupleUtil.Triple<Integer, Integer, String>> raw_anchor, raw_addition, raw_removal;
+	
+	public BaseVisitor(int Q_st, int Q_end,
+			int A_st, int A_end,
+			String Q_ex, String A_ex){
+		this.Q_st = Q_st;
+		this.Q_end = Q_end;
+		this.A_st = A_st;
+		this.A_end = A_end;
+		
+		this.Q_ex = new ArrayList<>();
+		for (String s : Q_ex.split(",", 0)) {
+			this.Q_ex.add(Integer.valueOf(s));
+		}
+		
+		this.A_ex = new ArrayList<>();
+		for (String s : A_ex.split(",", 0)) {
+			this.A_ex.add(Integer.valueOf(s));
+		}
+		
+		this.raw_anchor = new ArrayList<>();
+		this.raw_addition = new ArrayList<>();
+		this.raw_removal = new ArrayList<>();
+	}
+	
+	public void visit(CompilationUnit q_unit, CompilationUnit a_unit) {
+		this.CU = q_unit;
+		this.mode = "Question";
+		q_unit.accept(this);
+		
+		this.CU = a_unit;
+		this.mode = "Answer";
+		a_unit.accept(this);
+	}
+	
+	@Override
+    public boolean visit(MethodDeclaration node) {
+        // 処理
+		System.out.println(node.getName());
+		System.out.println(CU.getLineNumber(node.getStartPosition()));
+		
+		Block body = node.getBody();
+		for (Statement s : (List<Statement>) body.statements()) {
+            int line_num = CU.getLineNumber(s.getStartPosition());
+            // 質問側の場合
+            if (mode.equals("Question")) {
+            	if (Q_st <= line_num && line_num <= Q_end && !this.Q_ex.contains(line_num)){
+                	int abs_line_num = line_num;
+                	int relative_line_num = line_num - Q_st;
+                	String src = s.toString();
+                	this.raw_anchor.add(new TupleUtil.Triple<Integer, Integer, String>(
+                			abs_line_num, relative_line_num, src));
+                }
+                else if (Q_st <= line_num && line_num <= Q_end && this.Q_ex.contains(line_num)){
+                	int abs_line_num = line_num;
+                	int relative_line_num = line_num - Q_st;
+                	String src = s.toString();
+                	this.raw_removal.add(new TupleUtil.Triple<Integer, Integer, String>(
+                			abs_line_num, relative_line_num, src));
+                }
+			}
+            else if (mode.equals("Answer")) {
+            	if (A_st <= line_num && line_num <= A_end && this.A_ex.contains(line_num)){
+                	int abs_line_num = line_num;
+                	int relative_line_num = line_num - A_st;
+                	String src = s.toString();
+                	this.raw_removal.add(new TupleUtil.Triple<Integer, Integer, String>(
+                			abs_line_num, relative_line_num, src));
+                }
+			}         
+		}
+            
+        return super.visit(node);
+    }
+	
+    public boolean visit(FieldDeclaration node) {
+        System.out.println(node.toString());
+            
+        return true;
+    }
+	
+	public ArrayList<TupleUtil.Triple<Integer, Integer, String>> get_anchor(){
+		return this.raw_anchor;
+	}
+	
+	public ArrayList<TupleUtil.Triple<Integer, Integer, String>> get_addition(){
+		return this.raw_addition;
+	}
+	
+	public ArrayList<TupleUtil.Triple<Integer, Integer, String>> get_removal(){
+		return this.raw_removal;
+	}
+}

@@ -1,0 +1,59 @@
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.jdt.core.dom.*;
+
+import TupleUtil.Pair;
+
+public class BaseVisitor extends ASTVisitor {
+	private CompilationUnit CU = null;
+	private int Q_st, Q_end, A_st, A_end;
+	private ArrayList<Integer> Q_ex, A_ex;
+	private ArrayList<TupleUtil.Pair<Integer, String>> raw_anchor;
+	
+	public BaseVisitor(CompilationUnit unit,
+			int Q_st, int Q_end,
+			int A_st, int A_end,
+			String Q_ex, String A_ex){
+		CU = unit;
+		this.Q_st = Q_st;
+		this.Q_end = Q_end;
+		this.A_st = A_st;
+		this.A_end = A_end;
+		
+		this.Q_ex = new ArrayList<>();
+		for (String s : Q_ex.split(",", 0)) {
+			this.Q_ex.add(Integer.valueOf(s));
+		}
+		
+		this.A_ex = new ArrayList<>();
+		for (String s : A_ex.split(",", 0)) {
+			this.A_ex.add(Integer.valueOf(s));
+		}
+		
+		this.raw_anchor = new ArrayList<>();
+	}
+	
+	@Override
+    public boolean visit(MethodDeclaration node) {
+        // 処理
+		System.out.println(node.getName());
+		System.out.println(CU.getLineNumber(node.getStartPosition()));
+		
+		Block body = node.getBody();
+		for (Statement s : (List<Statement>) body.statements()) {
+            int line_num = CU.getLineNumber(s.getStartPosition());
+            if (Q_st <= line_num && line_num <= Q_end && !this.Q_ex.contains(line_num)){
+            	System.out.println(line_num);
+            	System.out.println(s.toString());
+            	this.raw_anchor.add(s.toString());
+            }
+		}
+            
+        return super.visit(node);
+    }
+	
+	public ArrayList<Pair<A, B>> get_anchor(){
+		return this.raw_anchor;
+	}
+}

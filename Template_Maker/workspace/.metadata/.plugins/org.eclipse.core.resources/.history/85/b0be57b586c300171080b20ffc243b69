@@ -1,0 +1,15 @@
+package TEST;
+
+public class Test1 {
+
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+		int i;
+		int j, k;
+		boolean l;
+		boolean m, n;
+		char c;
+		char d, e;
+	}
+
+}

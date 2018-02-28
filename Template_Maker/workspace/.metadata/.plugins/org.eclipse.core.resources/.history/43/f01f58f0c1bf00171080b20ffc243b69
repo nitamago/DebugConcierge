@@ -1,0 +1,7 @@
+import org.eclipse.jdt.core.dom.ASTVisitor;
+
+public class Visitor extends ASTVisitor {
+	public Visitor(){
+		super();
+	}
+}

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+<fullyQualifiedTypeName name="org.eclipse.jdt.core.dom.ASTParser"/>
+<fullyQualifiedTypeName name="org.eclipse.jdt.core.dom.AST"/>
+<fullyQualifiedTypeName name="org.eclipse.jdt.core.dom.CompilationUnit"/>
+<fullyQualifiedTypeName name="org.eclipse.jdt.core.dom.MethodDeclaration"/>
+<fullyQualifiedTypeName name="org.eclipse.core.runtime.NullProgressMonitor"/>
+<fullyQualifiedTypeName name="java.io.File"/>
+<fullyQualifiedTypeName name="java.io.FileReader"/>
+<fullyQualifiedTypeName name="java.io.FileNotFoundException"/>
+<fullyQualifiedTypeName name="java.io.BufferedReader"/>
+<fullyQualifiedTypeName name="java.io.FileWriter"/>
+<fullyQualifiedTypeName name="java.io.BufferedWriter"/>
+<fullyQualifiedTypeName name="java.io.PrintWriter"/>
+<fullyQualifiedTypeName name="org.eclipse.jdt.core.dom.Statement"/>
+<fullyQualifiedTypeName name="java.util.List"/>
+<fullyQualifiedTypeName name="java.lang.InternalError"/>
+<fullyQualifiedTypeName name="BaseVisitor"/>
+<fullyQualifiedTypeName name="org.eclipse.jdt.core.dom.LineComment"/>
+<fullyQualifiedTypeName name="java.lang.AbstractMethodError"/>
+<fullyQualifiedTypeName name="TupleUtil.Pair"/>
+<fullyQualifiedTypeName name="java.lang.Character"/>
+<fullyQualifiedTypeName name="C"/>
+<fullyQualifiedTypeName name="java.lang.Override"/>
+<fullyQualifiedTypeName name="TupleUtil.Triple"/>
+<fullyQualifiedTypeName name="java.lang.Integer"/>
+<fullyQualifiedTypeName name="java.lang.String"/>
+<fullyQualifiedTypeName name="TupleUtil"/>
+<fullyQualifiedTypeName name="java.util.ArrayList"/>
+<fullyQualifiedTypeName name="org.eclipse.core.internal.resources.VariableDescription"/>
+<fullyQualifiedTypeName name="org.eclipse.jdt.core.dom.VariableDeclarationStatement"/>
+<fullyQualifiedTypeName name="org.eclipse.jdt.internal.eval.VariablesInfo"/>
+<fullyQualifiedTypeName name="org.eclipse.jdt.core.dom.VariableDeclaration"/>
+<fullyQualifiedTypeName name="java.lang.System"/>
+</qualifiedTypeNameHistroy>

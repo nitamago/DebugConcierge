@@ -1,0 +1,207 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import org.eclipse.core.internal.resources.VariableDescription;
+import org.eclipse.jdt.core.dom.*;
+import org.eclipse.jdt.internal.eval.VariablesInfo;
+
+public class BaseVisitor extends ASTVisitor {
+	private CompilationUnit CU = null;
+	private String mode = "";
+	private int Q_st, Q_end, A_st, A_end;
+	private ArrayList<Integer> Q_ex, A_ex;
+	private ArrayList<TupleUtil.Triple<Integer, Integer, String>> raw_anchor, raw_addition, raw_removal;
+	private ArrayList<TupleUtil.Triple<Integer, String, String>> addition_constraints;
+	private HashMap<String, String> var_map;
+	
+	public BaseVisitor(int Q_st, int Q_end,
+			int A_st, int A_end,
+			String Q_ex, String A_ex){
+		this.Q_st = Q_st;
+		this.Q_end = Q_end;
+		this.A_st = A_st;
+		this.A_end = A_end;
+		
+		this.Q_ex = new ArrayList<>();
+		for (String s : Q_ex.split(",", 0)) {
+			if (s.equals("")) break;
+			this.Q_ex.add(Integer.valueOf(s));
+		}
+		
+		this.A_ex = new ArrayList<>();
+		for (String s : A_ex.split(",", 0)) {
+			if (s.equals("")) break;
+			this.A_ex.add(Integer.valueOf(s));
+		}
+		
+		this.raw_anchor = new ArrayList<>();
+		this.raw_addition = new ArrayList<>();
+		this.raw_removal = new ArrayList<>();
+		this.addition_constraints = new ArrayList<>();
+		
+		this.var_map = new HashMap<>();
+	}
+	
+	public void visit(CompilationUnit q_unit, CompilationUnit a_unit) {
+		this.CU = q_unit;
+		this.mode = "Question";
+		q_unit.accept(this);
+		
+		this.CU = a_unit;
+		this.mode = "Answer";
+		a_unit.accept(this);
+	}
+	
+	@Override
+    public boolean visit(MethodDeclaration node) {
+        Block body = node.getBody();
+		for (Statement s : (List<Statement>) body.statements()) {
+            int line_num = CU.getLineNumber(s.getStartPosition());
+            // 質問側の場合
+            if (mode.equals("Question")) {
+            	// アンカーの抽出
+            	if (is_q_clone(line_num)){
+                	int abs_line_num = line_num;
+                	int relative_line_num = line_num - Q_st;
+                	
+                	String src = s.toString();
+                	this.raw_anchor.add(new TupleUtil.Triple<Integer, Integer, String>(
+                			abs_line_num, relative_line_num, src));
+                }
+            	// 削除対象の抽出
+                else if (is_removal(line_num)){
+                	int abs_line_num = line_num;
+                	int relative_line_num = line_num - Q_st;
+                	String src = s.toString();
+                	this.raw_removal.add(new TupleUtil.Triple<Integer, Integer, String>(
+                			abs_line_num, relative_line_num, src));
+                }
+			}
+            // 回答側の場合
+            else if (mode.equals("Answer")) {
+            	// 追加対象の抽出
+            	if (is_addition(line_num)){
+                	int abs_line_num = line_num;
+                	int relative_line_num = line_num - A_st;
+                	String src = s.toString();
+                	this.raw_addition.add(new TupleUtil.Triple<Integer, Integer, String>(
+                			abs_line_num, relative_line_num, src));
+                }
+			}         
+		}
+            
+        return super.visit(node);
+    }
+	
+	private boolean is_addition(int line_num) {
+		if (A_st <= line_num && line_num <= A_end && this.A_ex.contains(line_num)) {
+			return true;
+		}
+		return false;
+	}
+
+	private boolean is_removal(int line_num) {
+		if (Q_st <= line_num && line_num <= Q_end && this.Q_ex.contains(line_num)) {
+			return true;
+		}
+		return false;
+	}
+
+	private boolean is_q_clone(int line_num) {
+		if (Q_st <= line_num && line_num <= Q_end && !this.Q_ex.contains(line_num)) {
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public boolean visit(MethodInvocation node){
+		if (node.getExpression() != null){
+			// QualifiedNameの場合
+			if(node.getExpression() instanceof QualifiedName) {
+				QualifiedName QN = (QualifiedName)node.getExpression();
+				int line_num = CU.getLineNumber(node.getStartPosition());
+				if (mode.equals("Question") && (is_q_clone(line_num) || is_removal(line_num))) {
+					System.out.println("Qualifiedオブジェクト："+QN.toString());
+					System.out.println("フルネーム："+QN.getFullyQualifiedName());
+				}
+				else if (mode.equals("Answer") && is_addition(line_num)) {
+					System.out.println("Qualifiedオオブジェクト："+QN.toString());
+					System.out.println("フルネーム："+QN.getFullyQualifiedName());
+					String constraint = "EXIST "+var_map.get(QN.getFullyQualifiedName())+" object";
+					this.addition_constraints.add(new TupleUtil.Triple<Integer, String, String>(
+							line_num, node.toString(), constraint));
+				}
+			}
+			// SimpleNameの場合
+			else if (node.getExpression() instanceof SimpleName) {
+				SimpleName SN = (SimpleName)node.getExpression();
+				int line_num = CU.getLineNumber(node.getStartPosition());
+				if (mode.equals("Question") && (is_q_clone(line_num) || is_removal(line_num))) {
+					System.out.println("Simpleオブジェクト："+SN.toString());
+					System.out.println("フルネーム："+SN.getFullyQualifiedName());
+					System.out.println("Class："+var_map.get(SN.getFullyQualifiedName()));
+				}
+				else if (mode.equals("Answer") && is_addition(line_num)) {
+					System.out.println("Simpleオブジェクト："+SN.toString());
+					System.out.println("フルネーム："+SN.getFullyQualifiedName());
+					System.out.println("Class："+var_map.get(SN.getFullyQualifiedName()));
+					String constraint = "EXIST "+var_map.get(SN.getFullyQualifiedName())+" object";
+					this.addition_constraints.add(new TupleUtil.Triple<Integer, String, String>(
+							line_num, node.toString(), constraint));
+				}
+			}
+		}
+		if (node.getName() != null) {
+			int line_num = CU.getLineNumber(node.getStartPosition());
+			if (mode.equals("Question") && (is_q_clone(line_num) || is_removal(line_num))) {
+					System.out.println("メソッド名："+node.getName().toString());
+			}
+			else if (mode.equals("Answer") && (is_addition(line_num))) {
+					System.out.println("メソッド名："+node.getName().toString());
+			}
+		}
+		
+		return super.visit(node);	
+	}
+
+	public boolean visit(FieldDeclaration node) {
+        String type = node.getType().toString();
+        for (Object f : node.fragments()) {
+			if (f instanceof VariableDeclarationFragment) {
+				VariableDeclarationFragment VDF = (VariableDeclarationFragment)f;
+				var_map.put(VDF.getName().toString(), type);
+			}
+		}
+        return true;
+    }
+	
+	public boolean  visit(VariableDeclarationStatement node){
+		String type = node.getType().toString();
+        for (Object f : node.fragments()) {
+			if (f instanceof VariableDeclarationFragment) {
+				VariableDeclarationFragment VDF = (VariableDeclarationFragment)f;
+				var_map.put(VDF.getName().toString(), type);
+				System.out.println(VDF.getName().toString()+":"+type);
+			}
+		}
+		return true;
+	}
+	
+	public ArrayList<TupleUtil.Triple<Integer, Integer, String>> get_anchor(){
+		return this.raw_anchor;
+	}
+	
+	public ArrayList<TupleUtil.Triple<Integer, Integer, String>> get_addition(){
+		return this.raw_addition;
+	}
+	
+	public ArrayList<TupleUtil.Triple<Integer, Integer, String>> get_removal(){
+		return this.raw_removal;
+	}
+
+	public ArrayList<TupleUtil.Triple<Integer, String, String>> get_constraint() {
+		return this.addition_constraints;
+	}
+}
