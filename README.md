@@ -20,5 +20,9 @@ Template_Maker/workspace内のEclipseプロジェクトを実行可能jarにす�
 python Manager.py --keyword android --template_make
 ```
 
+**アドレスが既に使用中ですと表示される場合**
+
+`ps aux | grep java`の結果に、java -cp /home/.pyenv/ ... ってプロセスがあると思うので、それをkillする
+
 Template_Maker/BaseInfo/resultの中にたくさんディレクトリができるはず
 
