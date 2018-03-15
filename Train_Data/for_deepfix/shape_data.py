@@ -43,6 +43,10 @@ O_MAX_LEN = 200
 ONLY_END = False
 
 if __name__ == "__main__":
+    if not os.path.exists("data"):
+        os.mkdir("data")
+    if not os.path.exists("fix"):
+        os.mkdir("fix")
     #gateway = start_server()
     #entry_point = gateway.entry_point
 
