@@ -87,7 +87,7 @@ class Clone_Analyzer:
             #api_strategy.run(q_tree, a_tree, q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
 
             # 別ツールで解析
-            get_base_info = Get_Base_Info(self.template_maker, "Template_Maker/BaseInfo.jar")
+            get_base_info = Get_Base_Info.get_instance(self.template_maker)
             get_base_info.run(template.tmplt_id, contents[0], contents[3], q_start, q_end, a_start, a_end, q_exclusions, a_exclusions)
 
 

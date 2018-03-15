@@ -39,7 +39,7 @@ class Template_Maker:
         self.debug_flag = debug_flag
         self.art_id = art_id
 
-        self.scroll_size = 100
+        self.scroll_size = 10
         
         self.stat = {}
         self.stat["total"] = 10000
@@ -74,11 +74,14 @@ class Template_Maker:
         #self.stat["total"] = total_count
         #page = self.db.get_records_by_tag("java", self.db.q_doc_type, total_count)
 
-        sid = page['_scroll_id']
+        if '_scroll_id' in page:
+            sid = page['_scroll_id']
         total = 0
         start = time.time()
         while page is not None:
             page = self.db.scroll(sid)
+            if '_scroll_id' not in page:
+                break
             sid = page['_scroll_id']
             total += len(page['hits']['hits'])
             self.process_page(page)
@@ -95,6 +98,9 @@ class Template_Maker:
             q_body_str = q_source["Body"]
             q_plain_str = self.plain(q_body_str)
             q_score = q_source["Score"]
+
+            # 情報表示
+            print("Q ID: {0}, time: {1}".format(q_id, time.time()))
 
             # For Debug
             if self.debug_flag and q_id != self.art_id:
@@ -129,9 +135,13 @@ class Template_Maker:
 
             for a_hit in a_hits:
                 a_source = a_hit["_source"]
+                if int(a_source["Score"]) <= 0:
+                    print("This answer is skipped by low Score")
+                    continue
                 a_id = a_source["Id"]
                 a_body_str = a_source["Body"]
                 a_plain_str = self.plain(a_body_str)
+
                 #テンプレート化する
                 try:
                     print("## {0} is being Templated #Score: {1} ##############".format(q_id, q_score))
@@ -154,6 +164,9 @@ class Template_Maker:
                 except ConvertError:
                     self.stat["not_compilable"] += 1
                     print("Failed")
+                except Exception as e:
+                    print("Failed for some reason")
+                    print(e)
             
                 # For Debug
                 if self.debug_flag and q_id == self.art_id:
