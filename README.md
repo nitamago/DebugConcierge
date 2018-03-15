@@ -35,15 +35,15 @@ python Manager.py --keyword android --template_make
 
 Template_Maker/BaseInfo/resultの中にたくさんディレクトリができるはず
 
-1. 生入力データを途中データに変換する
+2. 生入力データを途中データに変換する
 ```
 python Manager.py --keyword android --data_make
 ```
 これでTrain_Data内にinput.txtとoutput.txtができるはず
 
-1. input.txtとoutput.txtをTrain_Data/for_deepfixにコピーする
+3. input.txtとoutput.txtをTrain_Data/for_deepfixにコピーする
 
-1. 途中データにをDeepFix用に整形する
+4. 途中データにをDeepFix用に整形する
 Train_Data/for_deepfixに移動して、整形用スクリプトを実行する
 ```
 cd Train_Data/for_deepfix
