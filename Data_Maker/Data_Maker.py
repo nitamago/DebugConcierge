@@ -220,6 +220,8 @@ class Data_Maker:
 
     # 出力先の初期化
     def init_file(self, out_path):
+        if not os.path.exists(out_path):
+            os.mkdir(out_path)
         with open(out_path+"/input.txt", "w") as f_i:
             f_i.write("")
         with open(out_path+"/output.txt", "w") as f_o:
