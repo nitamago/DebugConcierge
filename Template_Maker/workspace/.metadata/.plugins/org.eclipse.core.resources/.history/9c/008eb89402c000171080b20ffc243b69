@@ -1,0 +1,54 @@
+
+import java.util.ArrayList;
+
+import org.eclipse.jdt.core.ToolFactory;
+import org.eclipse.jdt.core.compiler.IScanner;
+import org.eclipse.jdt.core.compiler.ITerminalSymbols;
+import org.eclipse.jdt.core.compiler.InvalidInputException;
+
+import py4j.GatewayServer;
+
+public class Main {
+	public static void main(String[] args) {
+		String mode = "";
+		if (args.length > 0) {
+			mode = args[0];
+		}
+		if (mode.equals("test")) {
+			main();
+		}
+		else {
+			Main app = new Main();
+		    // app を gateway.entry_point に設定
+		    GatewayServer server = new GatewayServer(app);
+		    server.start();
+		    System.out.println("Gateway Server Started");
+		}
+	}
+	
+	public static void main(){
+		System.out.println("Hello");
+		String src = "Scanner in=new Scanner(System.in);";
+		ArrayList<String> list = get_token(src);
+		for (String string : list) {
+			System.out.println(string);
+		}
+	}
+	
+	public static ArrayList<String> get_token(String src){
+		IScanner scanner = ToolFactory.createScanner(false, false, true, "1.9");
+        scanner.setSource(src.toCharArray());
+        ArrayList<String> list = new ArrayList<>();
+        int tokenType;
+        try {
+			while ((tokenType = scanner.getNextToken()) != ITerminalSymbols.TokenNameEOF) {
+			    String token = new String(scanner.getCurrentTokenSource());
+			    list.add(token);
+			}
+		} catch (InvalidInputException e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
+
+}

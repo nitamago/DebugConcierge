@@ -1,0 +1,28 @@
+package TEST;
+
+import org.eclipse.jdt.internal.compiler.batch.Main;
+
+public class Test1 {
+
+	public static void main(String[] args) {
+		// Var Declare Test
+		int i;
+		int j, k;
+		boolean l;
+		boolean m, n;
+		char c;
+		char d, e;
+		
+		// Var assign Test
+		i = 1;
+		j = i;
+		l = true;
+		m = l;
+		c = 'a';
+		d = c;
+		
+		// Constructor Test
+		Main main;
+	}
+
+}

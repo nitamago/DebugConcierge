@@ -1,0 +1,41 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+
+public class Main {
+
+	public static void main(String[] args) {
+		String path = "/Users/HiroseMasayuki/Documents/Git/Debug_Concierge/Template_Maker/workspace/Rewrite_test/src/Main.java";
+		try {
+			rewrite_variable(path);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	public static void rewrite_variable(String path) throws IOException{
+		ASTParser q_parser = ASTParser.newParser(AST.JLS8);
+		FileReader fileReader = new FileReader(new File(path));
+		BufferedReader br = new BufferedReader(fileReader);
+		String src;
+		while((srr = br.readLine()) != null){
+		    System.out.println(str);
+		  }
+		System.out.println(src);
+		q_parser.setSource(src.toCharArray());
+		CompilationUnit unit = (CompilationUnit) q_parser.createAST(new NullProgressMonitor());
+		Visitor visitor = new Visitor();
+		unit.accept(visitor);
+	}
+}

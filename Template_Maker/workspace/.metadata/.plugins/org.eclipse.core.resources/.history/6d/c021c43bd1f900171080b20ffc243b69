@@ -1,0 +1,5 @@
+import org.eclipse.jdt.core.dom.ASTVisitor;
+
+public class RewriteVisitor extends ASTVisitor {
+
+}

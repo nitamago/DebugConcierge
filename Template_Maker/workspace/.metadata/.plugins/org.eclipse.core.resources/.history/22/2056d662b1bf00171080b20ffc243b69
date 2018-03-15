@@ -1,0 +1,23 @@
+
+import org.eclipse.jdt.core.compiler.IScanner;
+import org.eclipse.jdt.core.compiler.ITerminalSymbols;
+import org.eclipse.jdt.core.compiler.InvalidInputException;
+
+public class Main {
+	public static void main(String[] args){
+		System.out.println("Hello");
+		String src = "Scanner in=new Scanner(System.in);";
+		IScanner scanner = ToolFactory.createScanner(false, false, true, "1.9");
+        scanner.setSource(src.toCharArray());
+        int tokenType;
+        try {
+			while ((tokenType = scanner.getNextToken()) != ITerminalSymbols.TokenNameEOF) {
+			    String token = new String(scanner.getCurrentTokenSource());
+			    System.out.println(token);
+			}
+		} catch (InvalidInputException e) {
+			e.printStackTrace();
+		}
+	}
+
+}

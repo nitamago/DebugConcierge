@@ -1,0 +1,16 @@
+import py4j.GatewayServer;
+
+public class Main {
+
+	public static void main(String[] args) {
+		Main app = new Main();
+	    // app を gateway.entry_point に設定
+	    GatewayServer server = new GatewayServer(app);
+	    server.start();
+	    System.out.println("Gateway Server Started");
+	}
+
+	public String get_Hello(){
+		return "Hello";
+	}
+}

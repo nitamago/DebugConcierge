@@ -1,0 +1,15 @@
+
+public class test {
+
+	public static void main(String[] args) {
+		String[] words = null;
+        if (words == null) {
+            words = new String[0];
+        }
+        List<String> newWatchlist = Arrays.asList(words);
+        List<String> other = new ArrayList<String>();
+        other.add("ddd");
+        newWatchlist.addAll(other);
+	}
+
+}

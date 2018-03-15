@@ -1,0 +1,58 @@
+import java.io.*;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+
+public class Main {
+
+	public static void main(String[] args) {
+		String Q_path = args[0];
+		String A_path = args[1];
+		String Out_path = args[2];
+		
+		String Q_src = get_src(Q_path);
+		String A_src = get_src(A_path);
+		
+		// Create AST Parser
+		ASTParser parser = ASTParser.newParser(AST.JLS8);
+		parser.setSource(Q_src.toCharArray());
+		CompilationUnit unit = (CompilationUnit) parser.createAST(new NullProgressMonitor());
+	
+		// Visit Node
+		BaseVisitor visitor = new BaseVisitor();
+		unit.accept(visitor);
+		
+		File file = new File(Out_path);
+		FileWriter filewriter;
+		try {
+			filewriter = new FileWriter(file);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		BufferedWriter bw = new BufferedWriter(filewriter);
+		PrintWriter pw = new PrintWriter(bw);
+	}
+
+	private static String get_src(String path){
+		String ret = "";
+		try{
+			  File file = new File(path);
+			  FileReader filereader = new FileReader(file);
+			  BufferedReader br = new BufferedReader(filereader);
+			  
+			  String str = br.readLine();
+			  while(str != null){
+				  ret += str;
+				  str = br.readLine();
+			  }
+		}catch(FileNotFoundException e){
+			System.out.println(e);
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+		return ret;
+	}
+}

@@ -3,8 +3,6 @@
 import os
 import sys
 
-import re
-import javalang
 from logging import getLogger, StreamHandler, NullHandler, DEBUG
 import configparser
 from py4j.java_gateway import JavaGateway
@@ -54,7 +52,9 @@ class Data_Maker:
         self.py4j_jar_path = inifile["Enviroment"]["py4j_jar_path"]    
         self.jar_path = inifile["Data_Maker"]["jar_path"]
         self.base_info_dir = inifile["Data_Maker"]["base_info_dir"]
-        self.id_pairs = self.get_id_pairs(self.base_info_dir)
+
+        # 出力ファイルの初期化
+        self.init_file(self.out_path)
 
     def run(self):
         # java gatewayサーバーを立ち上げる
@@ -74,10 +74,8 @@ class Data_Maker:
 
         # 中間データの読み込み
         total = 0
-        for directory in glob.glob(self.base_info_dir):
-            self.process_page(directory, app)
-            total += 1
-            print("{0} is done".format(total))
+        for directory in glob.glob(self.base_info_dir+"/*"):
+            total += self.process_page(directory, app)
         print("total: {0}".format(total))
 
         # プロセスをkill
@@ -85,11 +83,15 @@ class Data_Maker:
 
     def process_page(self, directory, app):
         q_source = ""
-        with open(directory+"/q_src.java") as f:
-            q_source = f.read()
         a_source = ""
-        with open(directory+"/a_src.java") as f:
-            a_source = f.read()
+        try:
+            with open(directory+"/q_src.java") as f:
+                q_source = f.read()
+            with open(directory+"/a_src.java") as f:
+                a_source = f.read()
+        except FileNotFoundError:
+            print(directory+" does not contain files")
+            return 0
 
         q_id, a_id = directory.split("/")[-1].split("-")
 
@@ -99,10 +101,16 @@ class Data_Maker:
         # データの整形
         data = {"q_id": q_id, "a_id": a_id,
                 "q_src": q_source, "a_src": a_source}
-        shaped_data = self.shape_data(app, data, directory)
+        try:
+            shaped_data = self.shape_data(app, data, directory)
+        except FileNotFoundError:
+            print(directory+" does not contain files")
+            return 0
 
         # データの書き出し
         self.write(self.out_path, shaped_data)
+
+        return 1
 
     # データの整形
     def shape_data(self, app, data, directory):
@@ -119,15 +127,19 @@ class Data_Maker:
         q_anchor_path = directory+"/q_anchor.txt"
         a_anchor_path = directory+"/a_anchor.txt"
         addition_path = directory+"/addition.txt"
+        removal_path = directory+"/removal.txt"
         if not os.path.exists(q_anchor_path):
             print(directory+" does not exists")
-            exit()
+            raise FileNotFoundError
         if not os.path.exists(a_anchor_path):
             print(directory+" does not exists")
-            exit()
+            raise FileNotFoundError
         if not os.path.exists(addition_path):
             print(directory+" does not exists")
-            exit()
+            raise FileNotFoundError
+        if not os.path.exists(removal_path):
+            print(directory+" does not exists")
+            raise FileNotFoundError
 
         # recommendの整形
         q_anchor = []
@@ -146,6 +158,7 @@ class Data_Maker:
                 code = content[2].replace("\n", "")
                 a_anchor.append((index, code))
 
+        # 挿入操作をまとめる
         recommends = []
         with open(addition_path) as f:
             for line in f:
@@ -158,13 +171,13 @@ class Data_Maker:
                         line_in_clone = i
                     elif line_in_clone == -1:
                         if len(q_anchor) > 0:
-                            recommends.append(
+                            recommends.append("<add> "+
                                     app.get_token(code)+" <before> "+app.get_token(q_anchor[0][1]))
                         else:
                             recommends.append("<add> "+app.get_token(code))
                             break
                     else:
-                        recommends.append(
+                        recommends.append("<add> "+
                                 app.get_token(code)+" <after> "+app.get_token(q_anchor[line_in_clone][1]))
                         break
                 if len(recommends) == 0:
@@ -173,7 +186,44 @@ class Data_Maker:
                     recommend_str = " <end> ".join(recommends) + " <end>"
                 
                 ret.append([q_id, a_id, q_tokens, recommend_str])
+
+        # 削除操作をまとめる
+        recommends = []
+        with open(removal_path) as f:
+            for line in f:
+                content = line.split(" ", 2)
+                index = int(content[1])
+                code = content[2].replace("\n", "")
+                line_in_clone = -1
+                for i in range(0, len(q_anchor)):
+                    if q_anchor[i][0] > index:
+                        line_in_clone = i
+                    elif line_in_clone == -1:
+                        if len(a_anchor) > 0:
+                            recommends.append("<rm> "+
+                                    app.get_token(code)+" <before> "+app.get_token(q_anchor[0][1]))
+                        else:
+                            recommends.append("<rm> "+app.get_token(code))
+                            break
+                    else:
+                        recommends.append("<rm> "+
+                                app.get_token(code)+" <after> "+app.get_token(q_anchor[line_in_clone][1]))
+                        break
+                if len(recommends) == 0:
+                    recommend_str = "<end>"
+                else:
+                    recommend_str = " <end> ".join(recommends) + " <end>"
+                
+                ret.append([q_id, a_id, q_tokens, recommend_str])
+ 
             return ret
+
+    # 出力先の初期化
+    def init_file(self, out_path):
+        with open(out_path+"/input.txt", "w") as f_i:
+            f_i.write("")
+        with open(out_path+"/output.txt", "w") as f_o:
+            f_o.write("")
 
     # データの書き出し
     def write(self, out_path, data_list):
@@ -183,165 +233,6 @@ class Data_Maker:
                     f_i.write("{0}-{1} {2} {3}\n".format(
                         q_id, a_id, i, q_token.replace('\n', '<br>')))
                     f_o.write("{0}-{1} {2} {3}\n".format(q_id, a_id, i, a_token))
-
-    # 余分なタグを外す
-    def plain(self, s):
-        s = s.replace("<pre>", "").replace("</pre>", "\n")
-        s = s.replace("<p>", "").replace("</p>", "\n")
-        return s.replace("&gt;", ">").replace("&lt;", "<")
-
-    # コンパイル可能なコードのリストを返す
-    def convert_compilable(self, q_or_a, q_id, plain_str):
-        p = re.compile("<code>.*?</code>", re.DOTALL)
-
-        codes = []
-        for line in p.findall(plain_str):
-            code = line.replace("<code>", "").replace("</code>", "")
-            codes.append(code)
-
-        # コードスニペットの解析
-        ret = []
-        for seq in range(0, len(codes)):
-            code = codes[seq]
-            if self.show_code:
-                logger.debug("Code No.{0}".format(seq))
-                logger.debug("== raw code block ============================")
-                logger.debug(code)
-                logger.debug("==============================")
-            if self.try_compile(code):
-                ret.append(code)
-                continue
-
-            # コード片をスケルトンへ移植
-            is_continue = False
-            for planted_code in self.plant_to_skeleton(code):
-                logger.debug("Skeleton-----------------------")
-                if self.try_compile(planted_code):
-                    ret.append(planted_code)
-                    is_continue = True
-                    break
-            if is_continue:
-                break
-
-            # コード片の最後にセミコロンを付け足して、スケルトンへ移植
-            """
-            if self.preference["CheckSemicolon"]:
-                semicoloned_code = self.check_semicolon(code)
-                logger.debug("Check Semicolon------------------------")
-                if self.try_compile(i, semicoloned_code):
-                    ret.append(semicoloned_code)
-                    break
-                is_continue = False
-                for planted_code in self.plant_to_skeleton(semicoloned_code):
-                    logger.debug("Skeleton & Check Semicolon----------------")
-                    if self.try_compile(i, planted_code):
-                        ret.append(planted_code)
-                        is_continue = True
-                if is_continue:
-                    break
-            """
-            # コード片を中カッコで閉じる
-            """
-            if self.preference["CloseBracket"]:
-                closed_bracket_code = self.close_bracket(code)
-                logger.debug("Closed Bracket--------------------------")
-                if self.try_compile(i, closed_bracket_code):
-                    ret.append(closed_bracket_code)
-                    break
-                d_closed_bracket_code = self.close_bracket(closed_bracket_code)
-                logger.debug("Double Closed Bracket--------------------------")
-                if self.try_compile(i, d_closed_bracket_code):
-                    ret.append(d_closed_bracket_code)
-                    break
-            """
-
-            raise ConvertError
-
-        return ret
-
-    # コンパイルできたらTrue
-    def try_compile(self, code):
-                try:
-                    tokens = list(javalang.tokenizer.tokenize(code))
-                    fixed_tokens = self.replace_literal(tokens)
-                    codes = []
-                    for j in range(0, len(fixed_tokens)):
-                        codes.append(fixed_tokens[j].value)
-                    javalang.parse.Parser(tokens)
-                    return True
-                except javalang.parser.JavaSyntaxError:
-                    logger.debug("- JavaSyntaxError")
-                    if self.show_code:
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                        logger.debug(code)
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                except javalang.tokenizer.LexerError:
-                    logger.debug("- LexerError")
-                    if self.show_code:
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                        logger.debug(code)
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                except TypeError:
-                    logger.debug("- TypeError")
-                    if self.show_code:
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                        logger.debug(code)
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                except AttributeError:
-                    logger.debug("- AttributeError")
-                    if self.show_code:
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                        logger.debug(code)
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                except IndexError:
-                    logger.debug("- IndexError")
-                    if self.show_code:
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                        logger.debug(code)
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                except StopIteration:
-                    logger.debug("- StopIteration")
-                    if self.show_code:
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                        logger.debug(code)
-                        logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-
-    # リテラルを置き換える
-    def replace_literal(self, tokens):
-        ret = []
-        for i in range(0, len(tokens)):
-            if type(tokens[i]) is javalang.tokenizer.Identifier:
-                tokens[i].value = tokens[i].value
-            if type(tokens[i]) is javalang.tokenizer.String:
-                tokens[i].value = "<Str>"
-            # print(type(tokens[i]))
-            ret.append(tokens[i])
-        return ret
-
-    # スケルトンコードに埋め込む
-    def plant_to_skeleton(self, code):
-        # code = self.check_semicolon(code)
-        ret = []
-        for i in range(1, 4):
-            if i == 1 and not self.skeleton_type["MethodContent"]:
-                continue
-            if i == 2 and not self.skeleton_type["ClassContent"]:
-                continue
-            with open("Template_Maker/Skeletons/Skeleton"+str(i)+".java") as f:
-                skeleton = f.read()
-            planted_code = skeleton.replace("/*insert here*/", code)
-            ret.append(planted_code)
-        return ret
-
-    def check_semicolon(self, code):
-        return code.replace("\n", ";\n")
-
-    def close_bracket(self, code):
-        return code+"}"
-
-    def get_id_pairs(self, info_dir):
-        ids = os.listdir(path=info_dir)
-        return set(ids)
 
 
 class ConvertError(Exception):
