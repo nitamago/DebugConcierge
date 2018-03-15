@@ -2,7 +2,7 @@
 自動バグ修正を目指した残滓がここに眠る
 
 ## 準備
-Template_Maker/workspace内のEclipseプロジェクトを実行可能jarにする
+### Template_Maker/workspace内のEclipseプロジェクトを実行可能jarにする
 
 1. Base_Info_AnalysisプロジェクトをBaseInfo.jarにビルドし、Template_Maker/BaseInfo.jarに配置する
 
@@ -12,7 +12,16 @@ Template_Maker/workspace内のEclipseプロジェクトを実行可能jarにす�
 
 1. scorpio.jarをTemplate_Maker/Code_Cloneに置く
 
-環境に合わせたConfig.iniを書くこと
+### 環境に合わせたConfig.iniを書くこと
+* [ ] scorpio_dirは正しいディレクトリを指しているか
+
+* [ ] q_codes_dirは正しいディレクトリを指しているか
+
+* [ ] a_codes_dirは正しいディレクトリを指しているか
+
+* [ ] clone_result_dirは正しいディレクトリを指しているか
+
+* [ ] store_dirは正しいディレクトリを指しているか
 
 ## DeepFix用データの作成
 生入力データの生成
