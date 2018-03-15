@@ -24,7 +24,7 @@
 * [ ] store_dirは正しいディレクトリを指しているか
 
 ## DeepFix用データの作成
-生入力データの生成
+生入力データの生成（すごく時間がかかるのでscreenなどを使うことをオススメする）
 ```
 python Manager.py --keyword android --template_make
 ```
@@ -35,3 +35,8 @@ python Manager.py --keyword android --template_make
 
 Template_Maker/BaseInfo/resultの中にたくさんディレクトリができるはず
 
+生入力データをDeepFix用に整形する
+```
+python Manager.py --keyword android --data_make
+```
+これでinput.txtとoutput.txtができるはず
